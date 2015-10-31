@@ -30,6 +30,7 @@
 
 # Debug files
 *.dSYM/
+<<<<<<< HEAD
 
 *.pydevproject
 .metadata
@@ -72,3 +73,5 @@ local.properties
 .texlipse
 
 .deps/*
+=======
+>>>>>>> 06989bb3b051598005b18bd231993948d1e1c4b6

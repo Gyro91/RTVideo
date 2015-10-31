@@ -10,7 +10,7 @@
 # 	BIN = my_awesome_bin
 ################################################################################
 
-SRC = RTVideo.c Draw.c
+SRC = RTVideo.c Draw.c Periodicity.c
 BIN = RTVideo
 
 ################################################################################
@@ -46,7 +46,7 @@ ALLEGRO_CFLAGS	= $(shell pkg-config --cflags allegro)
 #### flags #####################################################################
 CPPFLAGS 	= $(CPPFLG_D_$(D))
 CFLAGS   	= -std=c99 -Wpedantic -Wall -Wextra -O2 $(CFLG_D_$(D)) \
-			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS)
+			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS) -D_POSIX_C_SOURCE=199309L
 
 # I'm not sure librt is needed but let it stay there for the time being
 LDFLAGS  	= -lpthread -lrt $(ALLEGRO_LDFLAGS) $(MYLIBS_LDFLAGS)
