@@ -45,8 +45,8 @@ ALLEGRO_CFLAGS	= $(shell pkg-config --cflags allegro)
 
 #### flags #####################################################################
 CPPFLAGS 	= $(CPPFLG_D_$(D))
-CFLAGS   	= -std=c99 -Wpedantic -Wall -Wextra -O2 $(CFLG_D_$(D)) \
-			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS) -D_POSIX_C_SOURCE=199309L
+CFLAGS   	=  -Wall  \
+			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS) 
 
 # I'm not sure librt is needed but let it stay there for the time being
 LDFLAGS  	= -lpthread -lrt $(ALLEGRO_LDFLAGS) $(MYLIBS_LDFLAGS)

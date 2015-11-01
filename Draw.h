@@ -8,6 +8,10 @@
 #ifndef DRAW_H_
 #define DRAW_H_
 
+#define BLACK	0
+#define BLUE	14
+#define WHITE  	65535
+
 extern void draw_interface();
 extern void init();
 extern void draw_axisX(int, int);
