@@ -9,10 +9,36 @@
 #define PERIODICITY_H_
 
 #include <time.h>
+#include <pthread.h>
 
-extern int time_cmp(struct timespec *t1, struct timespec *t2);
-extern void time_add_ms(struct timespec *dst, long int ms);
-extern void add_timespec(struct timespec *dst, long int s, long int ns);
-extern void time_copy(struct timespec *dst, const struct timespec *src);
+typedef struct info_folder_ {
+	char name[16];				// Name of the video
+	char path[10];				// Path frame folder
+	int nframes;				// Number of frames in the folder
+	int x_window;				// For Display the video in a
+	int y_window;				// certain Window
+} Info_folder;
+
+typedef struct task_par_ {
+	pthread_t tid;				// Task tid
+	int arg;					// Task argument
+	int period;					// In milliseconds
+	int deadline;				// Relative (ms)
+	int priority;				// In [0,99]
+	int dmiss;					// Number of misses
+	struct timespec at;			// Next activ. time
+	struct timespec dl;			// Abs. Deadline
+	Info_folder Ifolder;	// Info folder video
+} task_par;
+
+extern int time_cmp(struct timespec *, struct timespec *);
+extern void time_add_ms(struct timespec *, long int);
+extern void add_timespec(struct timespec *, long int, long int);
+extern void time_copy(struct timespec *, const struct timespec *);
+extern int deadline_miss(task_par *);
+extern void wait_for_period(task_par *);
+extern void set_period(task_par *);
+
+
 
 #endif /* PERIODICITY_H_ */

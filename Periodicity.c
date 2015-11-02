@@ -1,5 +1,4 @@
-#include <time.h>
-
+#include "Periodicity.h"
 
 //.............................................................................
 // Copies the second passed time to the first one
@@ -56,4 +55,55 @@ void add_timespec(struct timespec *dst, long int s, long int ns)
 		    dst->tv_nsec -= 1e9;
 		    dst->tv_sec += 1;
 	}
+}
+
+//.............................................................................
+// Reads the currrent time and computes the next activation time and the
+// absolute deadline of the task.
+//.............................................................................
+
+void set_period(task_par *tp)
+{
+struct timespec	t;
+
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	time_copy(&(tp->at), &t);
+	time_copy(&(tp->dl), &t);
+	time_add_ms(&(tp->at), tp->period);
+	time_add_ms(&(tp->at), tp->deadline);
+}
+
+//.............................................................................
+// Suspends the calling thread until the next activation and, when awaken,
+// updates activation time and deadline
+//.............................................................................
+
+void wait_for_period(task_par *tp)
+{
+	clock_nanosleep(CLOCK_MONOTONIC,
+			TIMER_ABSTIME, &(tp->at), NULL);
+	time_add_ms(&(tp->at), tp->period);
+	time_add_ms(&(tp->at), tp->deadline);
+}
+
+//.............................................................................
+// If the thread is still in execution when reactivated, it increments
+// value of dmiss and returns 1, otherwise return 0.
+//.............................................................................
+
+int deadline_miss(task_par *tp)
+{
+int	ret;
+struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	if (time_cmp(&now, &tp->dl) > 0) {
+		tp->dmiss++;
+		ret = 1;
+	}
+	else
+		ret = 0;
+
+	return ret;
 }

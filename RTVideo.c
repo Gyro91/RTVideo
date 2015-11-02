@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <allegro.h>
-#include <pthread.h>
 #include <time.h>
 #include "Draw.h"
 #include "Periodicity.h"
@@ -17,55 +16,69 @@
 #define VIDEO_HEIGHT	200
 #define VIDEO_WIDTH		320
 
-struct info_folder {
-	char path[10];	// Path frame folder
-	int nframes;	// Number of frames in the folder
-	int x_window;	// For Display the video in a
-	int y_window;	// certain Window
-};
 
-struct info_folder Ifolder1;
-struct info_folder Ifolder2;
+task_par tp_play1;
+task_par tp_play2;
 
+
+//.............................................................................
+// Load video on the screen
+//.............................................................................
+
+void play_video(task_par *tp, int i)
+{
+char	filename[18];
+char	nframe[5];
+BITMAP	*bmp;
+Info_folder	*Ifolder =	&(tp->Ifolder);
+
+	sprintf(nframe, "%d", i);
+	strcpy(filename, Ifolder->path);
+	strcat(filename, nframe);
+	strcat(filename, ".bmp");
+
+	bmp = load_bitmap(filename, NULL);
+	if (bmp == NULL) {
+		printf("File not found\n");
+		exit(1);
+	}
+
+	blit(bmp, screen, 0, 0, Ifolder->x_window, Ifolder->y_window,
+			VIDEO_WIDTH + 14, VIDEO_HEIGHT);
+
+}
+
+//.............................................................................
+// Load state of the task on the screen
+//.............................................................................
+
+void load_state(task_par *tp)
+{
+Info_folder	*Ifolder =	&(tp->Ifolder);
+
+	textout_ex(screen, font, Ifolder->name,
+			Ifolder->x_window + 20, 200,
+			WHITE, BLACK);
+
+}
 //.............................................................................
 // Body of a task that plays a video on the screen
 //.............................................................................
 
-void	*play_task(void *p)
+void *play_task(void *p)
 {
-int		i = 1, period = 33;
-char 	filename[18];
-char 	nframe[5];
-BITMAP	*bmp;
-struct timespec t;
-struct info_folder *Ifolder = (struct info_folder *)p;
+int		i = 1;
+Info_folder	*Ifolder =	&(((task_par *)p)->Ifolder);
 
-		clock_gettime(CLOCK_MONOTONIC, &t);
-		time_add_ms(&t, period);
+		set_period((task_par *)p);
 		while(LOOP) {
-			sprintf(nframe, "%d", i);
-			strcpy(filename, Ifolder->path);
-			strcat(filename, nframe);
-			strcat(filename, ".bmp");
-
-			bmp = load_bitmap(filename, NULL);
-			if (bmp == NULL) {
-				printf("File not found\n");
-				exit(1);
-			}
-
-			blit(bmp, screen, 0, 0, Ifolder->x_window, Ifolder->y_window,
-					VIDEO_WIDTH + 14, VIDEO_HEIGHT);
-			textout_ex(screen, font, "Video1",
-					Ifolder->x_window + 20, 200,
-					WHITE, BLACK);
-			clock_nanosleep(CLOCK_MONOTONIC,
-							TIMER_ABSTIME, &t, NULL);
-			time_add_ms(&t, period);
+			play_video((task_par *)p, i);
+			load_state((task_par *)p);
+			wait_for_period((task_par *)p);
 
 			i++;
 
-			if(i == (Ifolder->nframes + 1))
+			if (i == (Ifolder->nframes + 1))
 				i = 1;
 		}
 
@@ -74,31 +87,39 @@ struct info_folder *Ifolder = (struct info_folder *)p;
 
 //.............................................................................
 // Function creates a task to play Video
-// Ifold is the struct to memorize all useful parameters
+// namevideo is the name of the video to load
+// tp is the struct to memorize all useful parameters for the task
 // dir is the path where are located the frames of the video
 // nframes is the number of frames in the directory
 // x & y are the coordinates where to display the video
 //.............................................................................
 
-void 	create_PlayTask(struct info_folder* Ifold, char * dir, int nframes,
-						int x, int y)
+void create_PlayTask(task_par *tp, char *namevideo, char *dir,
+				int nframes, int x, int y)
 {
-int ret;
-pthread_t tid;
+int			ret;
+pthread_t	tid;
 
-	Ifold->nframes	= nframes;
-	Ifold->x_window	= x;
-	Ifold->y_window	= y;
-	strcpy(Ifold->path, dir);
+	tp->period = 13;
+	tp->deadline = 13;
+	tp->dmiss = 0;
+	tp->priority = 0;
 
-	ret = pthread_create(&tid, NULL, play_task, (void *)Ifold);
+	tp->Ifolder.nframes	= nframes;
+	tp->Ifolder.x_window = x;
+	tp->Ifolder.y_window = y;
+	strcpy(tp->Ifolder.name, namevideo);
+	strcpy(tp->Ifolder.path, dir);
+
+	ret = pthread_create(&tid, NULL, play_task, (void *)tp);
 	if(ret != 0) {
 		perror("Error creating task video\n");
 		exit(1);
 	}
+	tp->tid = tid;
 }
 
-int		main ()
+int	main ()
 {
 struct timespec t, count, now, now_old;
 
@@ -106,8 +127,11 @@ struct timespec t, count, now, now_old;
 	draw_interface();
 
 	memset(&count, 0, sizeof(count));
-	create_PlayTask(&Ifolder1, "Video1/f_", 379, 0, 0);
-	create_PlayTask(&Ifolder2, "Video2/f_", 1440, 336, 3);
+	create_PlayTask(&tp_play1, "Bunny wake up",
+			"Video1/f_", 379, 0, 0);
+	create_PlayTask(&tp_play2, "Earth Rotating",
+			"Video2/f_", 1440, 336, 3);
+
 	// Main is a fake periodic task
 	// It starts to count time in a period of 50ms
 	// When it is active.
