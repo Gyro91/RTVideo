@@ -17,8 +17,8 @@
 #define ORIGIN_Y 650
 #define TIP_AXIS_Y 203
 #define HEIGHT_AXIS_Y 200
-#define TIP_AXIS_X 953
-#define HEIGHT_AXIS_X 950
+#define TIP_AXIS_X 943
+#define HEIGHT_AXIS_X 940
 #define BASE_AXIS 3
 
 
@@ -64,7 +64,7 @@ void draw_cardinal_axes()
 			ORIGIN_X + 10, ORIGIN_Y - HEIGHT_AXIS_Y,
 			WHITE, BLACK);
 	textout_ex(screen, font, "t(ms)",
-			ORIGIN_X + HEIGHT_AXIS_X + 5, ORIGIN_Y - 5,
+			ORIGIN_X + HEIGHT_AXIS_X + 10, ORIGIN_Y - 5,
 			WHITE, BLACK);
 }
 

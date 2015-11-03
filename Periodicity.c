@@ -1,6 +1,7 @@
 #include "Periodicity.h"
 #include <assert.h>
 #include <limits.h>
+
 //.............................................................................
 // Copies the second passed time to the first one
 //.............................................................................
@@ -79,7 +80,7 @@ struct timespec	t;
 	time_copy(&(tp->at), &t);
 	time_copy(&(tp->dl), &t);
 	time_add_ms(&(tp->at), tp->period);
-	time_add_ms(&(tp->at), tp->deadline);
+	time_add_ms(&(tp->dl), tp->deadline);
 }
 
 //.............................................................................
@@ -92,7 +93,7 @@ void wait_for_period(task_par *tp)
 	clock_nanosleep(CLOCK_MONOTONIC,
 			TIMER_ABSTIME, &(tp->at), NULL);
 	time_add_ms(&(tp->at), tp->period);
-	time_add_ms(&(tp->at), tp->deadline);
+	time_add_ms(&(tp->dl), tp->deadline);
 }
 
 //.............................................................................

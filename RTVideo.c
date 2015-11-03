@@ -11,12 +11,21 @@
 #include "Draw.h"
 #include "Periodicity.h"
 
-#define MAIN_PERIOD		50
 #define LOOP			1
+
+// Fake period of the main
+#define MAIN_PERIOD		50
+
+// Resolution for videos
 #define VIDEO_HEIGHT	200
 #define VIDEO_WIDTH		320
 
+// Max dimension for the text info of a video
+#define DIM_STATE		33
+// Max dimension for a string that contains info about dmiss
+#define DIM_DMISS		11
 
+// Structures for the 2 tasks that play videos
 task_par tp_play1;
 task_par tp_play2;
 
@@ -54,27 +63,38 @@ Info_folder	*Ifolder =	&(tp->Ifolder);
 
 void load_state(task_par *tp)
 {
+char state[DIM_STATE];
+char dmiss[DIM_DMISS];
 Info_folder	*Ifolder =	&(tp->Ifolder);
 
-	textout_ex(screen, font, Ifolder->name,
+	strcpy(state, Ifolder->name);
+	strcat(state, " Dmiss:");
+	sprintf(dmiss,"%d", tp->dmiss);
+	strcat(state, dmiss);
+
+	textout_ex(screen, font, state,
 			Ifolder->x_window + 20, 200,
 			WHITE, BLACK);
 
 }
+
 //.............................................................................
 // Body of a task that plays a video on the screen
 //.............................................................................
 
 void *play_task(void *p)
 {
-int		i = 1;
+int			i = 1;
+task_par	*tp = (task_par *)p;
 Info_folder	*Ifolder =	&(((task_par *)p)->Ifolder);
 
-		set_period((task_par *)p);
+		set_period(tp);
 		while(LOOP) {
-			play_video((task_par *)p, i);
-			load_state((task_par *)p);
-			wait_for_period((task_par *)p);
+			play_video(tp, i);
+			load_state(tp);
+
+			deadline_miss(tp);
+			wait_for_period(tp);
 
 			i++;
 
@@ -100,8 +120,8 @@ void create_PlayTask(task_par *tp, char *namevideo, char *dir,
 int			ret;
 pthread_t	tid;
 
-	tp->period = 13;
-	tp->deadline = 13;
+	tp->period = 30;
+	tp->deadline = 30;
 	tp->dmiss = 0;
 	tp->priority = 0;
 
@@ -127,7 +147,7 @@ struct timespec t, count, now, old;
 	draw_interface();
 
 	memset(&count, 0, sizeof(count));
-	create_PlayTask(&tp_play1, "Bunny wake up",
+	create_PlayTask(&tp_play1, "Bunny wakeup",
 			"Video1/f_", 379, 0, 0);
 	create_PlayTask(&tp_play2, "Earth Rotating",
 			"Video2/f_", 1440, 336, 3);
@@ -138,7 +158,7 @@ struct timespec t, count, now, old;
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
 		time_add_ms(&t, MAIN_PERIOD);
-		printf("count %ld.%ld\n", count.tv_sec, count.tv_nsec);
+	//	printf("count %ld.%ld\n", count.tv_sec, count.tv_nsec);
 		memset(&count, 0, sizeof(count));
 		memset(&now, 0, sizeof(now));
 		memset(&old, 0, sizeof(old));
