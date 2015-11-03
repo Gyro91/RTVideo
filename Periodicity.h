@@ -40,5 +40,4 @@ extern void wait_for_period(task_par *);
 extern void set_period(task_par *);
 
 
-
 #endif /* PERIODICITY_H_ */

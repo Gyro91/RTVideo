@@ -1,5 +1,6 @@
 #include "Periodicity.h"
-
+#include <assert.h>
+#include <limits.h>
 //.............................................................................
 // Copies the second passed time to the first one
 //.............................................................................
@@ -49,12 +50,20 @@ void time_add_ms(struct timespec *dst, long int ms)
 
 void add_timespec(struct timespec *dst, long int s, long int ns)
 {
-	dst->tv_sec += s;
-	dst->tv_nsec += ns;
-	if (dst->tv_nsec >= 1e9) {
-		    dst->tv_nsec -= 1e9;
-		    dst->tv_sec += 1;
+	// if could be overflow
+	if (ns > 0 && dst->tv_nsec > LONG_MAX - ns) {
+		s += ns / (long int) 1e9;
+		ns = ns % (long int) 1e9;
+	} // ns could be negative example 4.1s and 3.9s
+	else if(ns < 0) {
+		dst->tv_sec--;
+		ns += 1e9;
 	}
+	dst->tv_nsec += ns;
+	dst->tv_sec += s;
+
+	assert(dst->tv_nsec >= 0);
+
 }
 
 //.............................................................................

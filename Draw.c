@@ -8,15 +8,15 @@
 
 // Constants for handling screen
 #define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 768
+#define SCREEN_HEIGHT 675
 #define MAX_WIDTH 1023
 #define MAX_HEIGHT 767
 
 // Constants useful for drawing axes Workload function
-#define ORIGIN_X 20
-#define ORIGIN_Y 747
-#define TIP_AXIS_Y 303
-#define HEIGHT_AXIS_Y 300
+#define ORIGIN_X 30
+#define ORIGIN_Y 650
+#define TIP_AXIS_Y 203
+#define HEIGHT_AXIS_Y 200
 #define TIP_AXIS_X 953
 #define HEIGHT_AXIS_X 950
 #define BASE_AXIS 3
@@ -63,8 +63,8 @@ void draw_cardinal_axes()
 	textout_ex(screen, font, "Workload",
 			ORIGIN_X + 10, ORIGIN_Y - HEIGHT_AXIS_Y,
 			WHITE, BLACK);
-	textout_ex(screen, font, "Time",
-			ORIGIN_X + HEIGHT_AXIS_X + 10, ORIGIN_Y - 5,
+	textout_ex(screen, font, "t(ms)",
+			ORIGIN_X + HEIGHT_AXIS_X + 5, ORIGIN_Y - 5,
 			WHITE, BLACK);
 }
 
