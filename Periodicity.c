@@ -97,6 +97,16 @@ void wait_for_period(task_par *tp)
 }
 
 //.............................................................................
+// Adds a delay of 1 sec to the given time
+//.............................................................................
+
+void wait_for_one_sec(struct timespec *t)
+{
+	clock_gettime(CLOCK_MONOTONIC, t);
+	time_add_ms(t, 1000);
+}
+
+//.............................................................................
 // If the thread is still in execution when reactivated, it increments
 // value of dmiss and returns 1, otherwise return 0.
 //.............................................................................

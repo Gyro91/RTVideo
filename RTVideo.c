@@ -20,11 +20,6 @@
 #define VIDEO_HEIGHT	200
 #define VIDEO_WIDTH		320
 
-// Max dimension for the text info of a video
-#define DIM_STATE		33
-// Max dimension for a string that contains info about dmiss
-#define DIM_DMISS		11
-
 // Structures for the 2 tasks that play videos
 task_par tp_play1;
 task_par tp_play2;
@@ -57,24 +52,30 @@ Info_folder	*Ifolder =	&(tp->Ifolder);
 
 }
 
+
 //.............................................................................
 // Load state of the task on the screen
 //.............................................................................
 
-void load_state(task_par *tp)
+void load_state(task_par *tp, struct timespec *t)
 {
-char state[DIM_STATE];
-char dmiss[DIM_DMISS];
+
 Info_folder	*Ifolder =	&(tp->Ifolder);
+struct timespec now;
 
-	strcpy(state, Ifolder->name);
-	strcat(state, " Dmiss:");
-	sprintf(dmiss,"%d", tp->dmiss);
-	strcat(state, dmiss);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (time_cmp(&now,t) >= 0) {
+		tp->frame_r = tp->frame_c;
+		tp->frame_c = 0;
+		time_add_ms(t, 1000);
+	}
 
-	textout_ex(screen, font, state,
-			Ifolder->x_window + 20, 200,
+	textout_ex(screen, font, Ifolder->name,
+			Ifolder->x_window + 10, 200,
 			WHITE, BLACK);
+
+	text_state(Ifolder->x_window + 80, 200, "Dmiss:", tp->dmiss);
+	text_state(Ifolder->x_window + 170, 200, "Frame-Rate(sec):", tp->frame_r);
 
 }
 
@@ -84,34 +85,46 @@ Info_folder	*Ifolder =	&(tp->Ifolder);
 
 void *play_task(void *p)
 {
-int			i = 1;
-task_par	*tp = (task_par *)p;
-Info_folder	*Ifolder =	&(((task_par *)p)->Ifolder);
+int				i = 1;
+task_par		*tp = (task_par *)p;
+Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
+struct timespec	t;
 
-		set_period(tp);
-		while(LOOP) {
-			play_video(tp, i);
-			load_state(tp);
+	// Setup t for counting the frame rate in a second
+	wait_for_one_sec(&t);
+	set_period(tp);
+	while(LOOP) {
 
-			deadline_miss(tp);
-			wait_for_period(tp);
+		// Loading the video on the screen
+		play_video(tp, i);
 
-			i++;
+		// Loading Info video on the screen
+		load_state(tp, &t);
 
-			if (i == (Ifolder->nframes + 1))
-				i = 1;
-		}
+		// Checking dl_miss & waiting for
+		// the next activation
+		deadline_miss(tp);
+		wait_for_period(tp);
+
+		// Updating index to the next frame in the folder
+		i++;
+		// Counting the frames in a second
+		tp->frame_c++;
+
+		if (i == (Ifolder->nframes + 1))
+			i = 1;
+	}
 
 	pthread_exit(NULL);
 }
 
 //.............................................................................
 // Function creates a task to play Video
-// namevideo is the name of the video to load
-// tp is the struct to memorize all useful parameters for the task
-// dir is the path where are located the frames of the video
-// nframes is the number of frames in the directory
-// x & y are the coordinates where to display the video
+// @parma namevideo is the name of the video to load
+// @param tp is the struct to memorize all useful parameters for the task
+// @param dir is the path where are located the frames of the video
+// @param nframes is the number of frames in the directory
+// @param x & y are the coordinates where to display the video
 //.............................................................................
 
 void create_PlayTask(task_par *tp, char *namevideo, char *dir,
@@ -122,8 +135,6 @@ pthread_t	tid;
 
 	tp->period = 30;
 	tp->deadline = 30;
-	tp->dmiss = 0;
-	tp->priority = 0;
 
 	tp->Ifolder.nframes	= nframes;
 	tp->Ifolder.x_window = x;
@@ -147,9 +158,9 @@ struct timespec t, count, now, old;
 	draw_interface();
 
 	memset(&count, 0, sizeof(count));
-	create_PlayTask(&tp_play1, "Bunny wakeup",
+	create_PlayTask(&tp_play1, "Bunny",
 			"Video1/f_", 379, 0, 0);
-	create_PlayTask(&tp_play2, "Earth Rotating",
+	create_PlayTask(&tp_play2, "Earth",
 			"Video2/f_", 1440, 336, 3);
 
 	// Main is a fake periodic task

@@ -26,9 +26,11 @@ typedef struct task_par_ {
 	int deadline;				// Relative (ms)
 	int priority;				// In [0,99]
 	int dmiss;					// Number of misses
+	int frame_r;				// Value of the frame rate
+	int frame_c;				// Counter for the frame rate
 	struct timespec at;			// Next activ. time
 	struct timespec dl;			// Abs. Deadline
-	Info_folder Ifolder;	// Info folder video
+	Info_folder Ifolder;		// Info folder video
 } task_par;
 
 extern int time_cmp(struct timespec *, struct timespec *);
@@ -38,6 +40,7 @@ extern void time_copy(struct timespec *, const struct timespec *);
 extern int deadline_miss(task_par *);
 extern void wait_for_period(task_par *);
 extern void set_period(task_par *);
+extern void wait_for_one_sec(struct timespec *);
 
 
 #endif /* PERIODICITY_H_ */

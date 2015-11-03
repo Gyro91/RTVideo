@@ -1,4 +1,5 @@
 #include <allegro.h>
+#include <stdio.h>
 
 // Colors used
 #define BLACK	0
@@ -21,6 +22,10 @@
 #define HEIGHT_AXIS_X 940
 #define BASE_AXIS 3
 
+// Max dimension for a string that contains an integer
+#define DIM_INT		11
+// Max dimension for the status text info of a video
+#define DIM_STATUS	28
 
 //.............................................................................
 // Function for init Allegro stuffs
@@ -96,4 +101,24 @@ void draw_interface()
 	// Drawing axes for Workload function
 
 	draw_cardinal_axes();
+}
+
+//.............................................................................
+// Function for creating text info of a video loaded on (x,y) in the screen
+// It has this format: "status:value"
+//.............................................................................
+
+void text_state(int x, int y, char *status, int value)
+{
+char state[DIM_STATUS] = "\0";
+char integer[DIM_INT];
+
+		strcat(state, status);
+
+		sprintf(integer,"%d", value);
+		strcat(state, integer);
+
+		textout_ex(screen, font, state,
+					x, y,
+					WHITE, BLACK);
 }
