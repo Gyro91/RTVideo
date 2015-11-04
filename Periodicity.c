@@ -127,3 +127,15 @@ struct timespec now;
 
 	return ret;
 }
+
+
+void busy_wait(int ms)
+{
+  struct timespec t, now;
+
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t);
+  time_add_ms(&t, ms);
+  do {
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
+  } while (time_cmp(&now, &t) < 0) ;
+}

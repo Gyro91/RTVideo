@@ -1,31 +1,7 @@
-#include <allegro.h>
 #include <stdio.h>
+#include "Draw.h"
 
-// Colors used
-#define BLACK	0
-#define BLUE	14
-#define WHITE  	65535
-#define GOLD makecol16(255,215,0)
-
-// Constants for handling screen
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 675
-#define MAX_WIDTH 1023
-#define MAX_HEIGHT 767
-
-// Constants useful for drawing axes Workload function
-#define ORIGIN_X 30
-#define ORIGIN_Y 650
-#define TIP_AXIS_Y 203
-#define HEIGHT_AXIS_Y 200
-#define TIP_AXIS_X 943
-#define HEIGHT_AXIS_X 940
-#define BASE_AXIS 3
-
-// Max dimension for a string that contains an integer
-#define DIM_INT		11
-// Max dimension for the status text info of a video
-#define DIM_STATUS	28
+graph workload;
 
 //.............................................................................
 // Function for init Allegro stuffs
@@ -41,6 +17,10 @@ void init()
 	clear_to_color(screen, BLACK);
 }
 
+//.............................................................................
+// Function for drawing axis Y
+//.............................................................................
+
 void draw_axisY(int x, int y)
 {
 	line(screen, x, y - HEIGHT_AXIS_Y, x, y, GOLD);
@@ -50,6 +30,9 @@ void draw_axisY(int x, int y)
 			GOLD);
 }
 
+//.............................................................................
+// Function for drawing axis X
+//.............................................................................
 
 void draw_axisX(int x, int y)
 {
@@ -60,15 +43,69 @@ void draw_axisX(int x, int y)
 			GOLD);
 }
 
+//.............................................................................
+// Function for drawing a scale on y. Axes y is in %, every 2 pixel there's 1%
+//.............................................................................
+
+void draw_scaleY()
+{
+int 	i;
+char 	uinteger[4];
+
+	for (i=10; i<=100; i+=10) {
+		// Drawing a ref value on the axis
+		line(screen, ORIGIN_X, ORIGIN_Y - i * 2,
+				ORIGIN_X + 3, ORIGIN_Y - i * 2, GOLD);
+		// Drawing a mark on the axis
+		sprintf(uinteger, "%d", i);
+		textout_ex(screen, font, uinteger,
+				ORIGIN_X - 27, ORIGIN_Y - (i * 2) - 5,
+				WHITE, BLACK);
+	}
+}
+
+//.............................................................................
+// Function for drawing a scale on x. Axes x is in sec, every 1 pixel
+// there's 50ms
+//.............................................................................
+
+void draw_scaleX()
+{
+int		i, count = 1;
+char	uinteger[4];
+
+	for (i=ORIGIN_X + 20; i<=HEIGHT_AXIS_X; i+=20) {
+		// Drawing a ref value on the axis
+		line(screen, i, ORIGIN_Y,
+				i, ORIGIN_Y - 3, GOLD);
+		// Drawing a mark on the axis
+		sprintf(uinteger, "%d", count);
+		textout_ex(screen, font, uinteger,
+				i, ORIGIN_Y + 5,
+				WHITE, BLACK);
+		count++;
+	}
+}
+
+//.............................................................................
+// Function for drawing a cardinal axes for the Workload function
+//.............................................................................
+
 void draw_cardinal_axes()
 {
+	// Drawing axes
 	draw_axisY(ORIGIN_X, ORIGIN_Y);
 	draw_axisX(ORIGIN_X, ORIGIN_Y);
 
-	textout_ex(screen, font, "Workload",
-			ORIGIN_X + 10, ORIGIN_Y - HEIGHT_AXIS_Y,
+	// Drawing a scale for axes
+	draw_scaleY();
+	draw_scaleX();
+
+	// Print info axes on screen
+	textout_ex(screen, font, "Workload (%)",
+			ORIGIN_X + 10, ORIGIN_Y - HEIGHT_AXIS_Y - 3,
 			WHITE, BLACK);
-	textout_ex(screen, font, "t(ms)",
+	textout_ex(screen, font, "t (s)",
 			ORIGIN_X + HEIGHT_AXIS_X + 10, ORIGIN_Y - 5,
 			WHITE, BLACK);
 }
@@ -121,4 +158,28 @@ char integer[DIM_INT];
 		textout_ex(screen, font, state,
 					x, y,
 					WHITE, BLACK);
+}
+
+//.............................................................................
+// Function for drawing a new point on the graph
+//.............................................................................
+
+void draw_point(int x, int y)
+{
+int i = workload.index;
+
+	workload.points[i].x = x;
+	workload.points[i].y = ORIGIN_Y - (y * 2);
+
+	if(i == 0)
+		putpixel(screen,
+				x, ORIGIN_Y - (y * 2),
+				RED);
+	else
+		line(screen, x, ORIGIN_Y - (y * 2),
+				workload.points[i - 1].x,
+				workload.points[i - 1].y,
+				RED);
+
+	workload.index++;
 }

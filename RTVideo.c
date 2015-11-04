@@ -6,15 +6,15 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include <allegro.h>
 #include <time.h>
 #include "Draw.h"
 #include "Periodicity.h"
-
+#include "Sched_new.h"
 #define LOOP			1
 
 // Fake period of the main
 #define MAIN_PERIOD		50
+#define RUNTIME_ALONE 	50000000
 
 // Resolution for videos
 #define VIDEO_HEIGHT	200
@@ -59,7 +59,6 @@ Info_folder	*Ifolder =	&(tp->Ifolder);
 
 void load_state(task_par *tp, struct timespec *t)
 {
-
 Info_folder	*Ifolder =	&(tp->Ifolder);
 struct timespec now;
 
@@ -90,6 +89,7 @@ task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
+	set_scheduler(99);
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
@@ -100,6 +100,8 @@ struct timespec	t;
 
 		// Loading Info video on the screen
 		load_state(tp, &t);
+
+	//	busy_wait(50000);
 
 		// Checking dl_miss & waiting for
 		// the next activation
@@ -152,6 +154,8 @@ pthread_t	tid;
 
 int	main ()
 {
+long double res = 0;
+int y = 0, x = ORIGIN_X;
 struct timespec t, count, now, old;
 
 	init();
@@ -163,13 +167,22 @@ struct timespec t, count, now, old;
 	create_PlayTask(&tp_play2, "Earth",
 			"Video2/f_", 1440, 336, 3);
 
+	//set_scheduler(1);
 	// Main is a fake periodic task
 	// It starts to count time in a period of 50ms
 	// When it is active.
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
 		time_add_ms(&t, MAIN_PERIOD);
-	//	printf("count %ld.%ld\n", count.tv_sec, count.tv_nsec);
+		//printf("count %ld.%ld\n", count.tv_sec, count.tv_nsec);
+		res = 1 - (long double) count.tv_nsec /
+				(long double)RUNTIME_ALONE;
+		y = (int) res;
+
+		draw_point(x, y);
+		x = x + 1;
+		printf("res %Lf\n", res);
+		printf("y %d\n", y);
 		memset(&count, 0, sizeof(count));
 		memset(&now, 0, sizeof(now));
 		memset(&old, 0, sizeof(old));

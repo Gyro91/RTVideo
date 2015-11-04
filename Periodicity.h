@@ -41,6 +41,6 @@ extern int deadline_miss(task_par *);
 extern void wait_for_period(task_par *);
 extern void set_period(task_par *);
 extern void wait_for_one_sec(struct timespec *);
-
+extern void busy_wait(int ms);
 
 #endif /* PERIODICITY_H_ */
