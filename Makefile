@@ -10,7 +10,7 @@
 # 	BIN = my_awesome_bin
 ################################################################################
 
-SRC = RTVideo.c Draw.c Periodicity.c Sched_new.c
+SRC = RTVideo.c Draw.c Periodicity.c Sched_new.c Task.c
 BIN = RTVideo
 
 ################################################################################

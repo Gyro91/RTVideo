@@ -1,3 +1,9 @@
+/*
+ ============================================================================
+ Name        : Periodicity.c
+ Author      : Matteo Rotundo
+ ============================================================================
+ */
 #include "Periodicity.h"
 #include <assert.h>
 #include <limits.h>

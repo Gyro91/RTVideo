@@ -6,22 +6,29 @@
 O_SRCS += \
 ../Draw.o \
 ../Periodicity.o \
-../RTVideo.o 
+../RTVideo.o \
+../Sched_new.o 
 
 C_SRCS += \
 ../Draw.c \
 ../Periodicity.c \
-../RTVideo.c 
+../RTVideo.c \
+../Sched_new.c \
+../Task.c 
 
 OBJS += \
 ./Draw.o \
 ./Periodicity.o \
-./RTVideo.o 
+./RTVideo.o \
+./Sched_new.o \
+./Task.o 
 
 C_DEPS += \
 ./Draw.d \
 ./Periodicity.d \
-./RTVideo.d 
+./RTVideo.d \
+./Sched_new.d \
+./Task.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

@@ -65,7 +65,7 @@ char 	uinteger[4];
 }
 
 //.............................................................................
-// Function for drawing a scale on x. Axes x is in sec, every 1 pixel
+// Function for drawing a scale on x. Axes x is in sec, every 4 pixel
 // there's 50ms
 //.............................................................................
 
@@ -74,7 +74,7 @@ void draw_scaleX()
 int		i, count = 1;
 char	uinteger[4];
 
-	for (i=ORIGIN_X + 20; i<=HEIGHT_AXIS_X; i+=20) {
+	for (i=ORIGIN_X + 80; i<=HEIGHT_AXIS_X; i+=80) {
 		// Drawing a ref value on the axis
 		line(screen, i, ORIGIN_Y,
 				i, ORIGIN_Y - 3, GOLD);
