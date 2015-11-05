@@ -133,7 +133,6 @@ struct 	timespec t, now;
 int y = 0, x = ORIGIN_X;
 
 	UNUSED(p);
-	init_cpu();
 	set_scheduler(1);
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
