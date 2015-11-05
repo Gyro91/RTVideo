@@ -82,8 +82,8 @@ void create_PlayTask(task_par *tp, char *namevideo, char *dir,
 int			ret;
 pthread_t	tid;
 
-	tp->period = 100;
-	tp->deadline = 100;
+	tp->period = 30;
+	tp->deadline = 30;
 
 	tp->Ifolder.nframes	= nframes;
 	tp->Ifolder.x_window = x;

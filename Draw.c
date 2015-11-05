@@ -55,7 +55,8 @@ char 	uinteger[4];
 	for (i=10; i<=100; i+=10) {
 		// Drawing a ref value on the axis
 		line(screen, ORIGIN_X, ORIGIN_Y - i * 2,
-				ORIGIN_X + 3, ORIGIN_Y - i * 2, GOLD);
+				ORIGIN_X + 3, ORIGIN_Y - i * 2,
+				GOLD);
 		// Drawing a mark on the axis
 		sprintf(uinteger, "%d", i);
 		textout_ex(screen, font, uinteger,
@@ -73,8 +74,9 @@ void draw_scaleX()
 {
 int		i, count = 1;
 char	uinteger[4];
+int step = SCALE_X * 20; // It's where is one second
 
-	for (i=ORIGIN_X + 80; i<=HEIGHT_AXIS_X; i+=80) {
+	for (i=ORIGIN_X + step; i<=HEIGHT_AXIS_X; i+=step) {
 		// Drawing a ref value on the axis
 		line(screen, i, ORIGIN_Y,
 				i, ORIGIN_Y - 3, GOLD);
@@ -124,16 +126,27 @@ void draw_interface()
 	// Drawing 2 rows
 
 	line(screen, 0, 0, MAX_WIDTH, 0, BLUE);
-	line(screen, 0, 215, MAX_WIDTH, 215, BLUE);
-	line(screen, 0, 430, MAX_WIDTH, 430, BLUE);
-	line(screen, 0, MAX_HEIGHT, MAX_WIDTH, MAX_HEIGHT, BLUE);
+	line(screen, 0, START_OVERLOAD_SCREEN - 1,
+			MAX_WIDTH, START_OVERLOAD_SCREEN - 1,
+			BLUE);
+	line(screen, 0, START_GRAPH_SCREEN - 1,
+			MAX_WIDTH,START_GRAPH_SCREEN - 1,
+			BLUE);
+	line(screen, 0, MAX_HEIGHT,
+			MAX_WIDTH, MAX_HEIGHT,
+			BLUE);
 
 	//  Drawing 3 columns
 
 	line(screen, 0, 0, 0, MAX_HEIGHT, BLUE);
-	line(screen, MAX_WIDTH, 0, MAX_WIDTH, MAX_HEIGHT, BLUE);
-	line(screen, 335, 0, 335, 430, BLUE);
-	line(screen, 670, 0, 670, 430, BLUE);
+	line(screen, MAX_WIDTH, 0,
+			MAX_WIDTH, MAX_HEIGHT,
+			BLUE);
+	line(screen, COLUMN, 0, COLUMN,
+			START_GRAPH_SCREEN - 1, BLUE);
+	line(screen, COLUMN * 2, 0,
+			COLUMN * 2,
+			START_GRAPH_SCREEN - 1, BLUE);
 
 	// Drawing axes for Workload function
 
@@ -169,17 +182,30 @@ void draw_point(int x, int y)
 int i = workload.index;
 
 	workload.points[i].x = x;
-	workload.points[i].y = ORIGIN_Y - (y * 2);
+	workload.points[i].y = ORIGIN_Y - (y * SCALE_Y);
 
 	if(i == 0)
 		putpixel(screen,
-				x, ORIGIN_Y - (y * 2),
+				x, ORIGIN_Y - (y * SCALE_Y),
 				RED);
 	else
-		line(screen, x, ORIGIN_Y - (y * 2),
+		line(screen, x, ORIGIN_Y - (y * SCALE_Y),
 				workload.points[i - 1].x,
 				workload.points[i - 1].y,
 				RED);
 
 	workload.index++;
+}
+
+//.............................................................................
+// Function for cleaning the workload graph
+//.............................................................................
+
+void clean_graph()
+{
+	rectfill(screen,
+			MAX_WIDTH, MAX_HEIGHT,
+			0, START_GRAPH_SCREEN, BLACK);
+	draw_cardinal_axes();
+	workload.index = 0;
 }

@@ -40,11 +40,11 @@ struct 	sched_attr attr;
 
 	ret = sched_setattr(0, &attr, 0);
 	if (ret < 0) {
-	pthread_mutex_lock(&console_mux);
-	perror("ERROR: sched_setattr");
-	printf("priority: %d\n",
-         attr.sched_priority);
-	pthread_mutex_unlock(&console_mux);
-	pthread_exit(NULL);
+		pthread_mutex_lock(&console_mux);
+		perror("ERROR: sched_setattr");
+		printf("priority: %d\n",
+				attr.sched_priority);
+		pthread_mutex_unlock(&console_mux);
+		pthread_exit(NULL);
 	}
 }

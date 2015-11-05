@@ -128,7 +128,7 @@ struct timespec	t;
 
 void *plot_task(void *p)
 {
-float 	n = 0, res;
+float 	n = 0, workload;
 struct 	timespec t, now;
 int y = 0, x = ORIGIN_X;
 
@@ -137,10 +137,20 @@ int y = 0, x = ORIGIN_X;
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
 		time_add_ms(&t, FAKE_PERIOD);
-		res = 1 - n / N;
-		y = res * 100;
+
+		// Computing workload
+		workload = 1 - n / N;
+
+		// Plotting workload
+		y = workload * 100;
 		draw_point(x, y);
-		x = x + 4;
+		// Moving to the next time
+		x = x + SCALE_X;
+		if(x > HEIGHT_AXIS_X) {
+			clean_graph();
+			x = ORIGIN_X;
+		}
+		// Counting
 		n = 0;
 		do {
 			n += STEP_COUNT;
