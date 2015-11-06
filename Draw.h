@@ -13,8 +13,9 @@
 #define BLACK	0
 #define BLUE	14
 #define WHITE  	65535
-#define GOLD makecol16(255, 215, 0)
-#define RED makecol16(255, 0, 0)
+#define GOLD 	makecol16(255, 215, 0)
+#define RED 	makecol16(255, 0, 0)
+#define RANDOM	makecol(rand()%255, rand()%255, rand()%255)
 
 // Constants for handling screen
 #define SCREEN_WIDTH 			1024

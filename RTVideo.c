@@ -12,8 +12,10 @@
 
 
 // Structures for the 2 tasks that play videos
-task_par tp_play1;
-task_par tp_play2;
+task_par	tp_play1;
+task_par	tp_play2;
+
+task_par	mouse_t;
 
 extern float N;
 
@@ -32,12 +34,35 @@ pthread_t	tid;
 		exit(1);
 	}
 
+	printf("PlotTask created\n");
+
 	ret = pthread_join(tid, NULL);
 	if(ret != 0) {
-		perror("Error join on plot task\n");
+		perror("Error join on Activator task\n");
+		exit(1);
+	}
+}
+
+//.............................................................................
+// Function creates a task that must handles mouse events
+//.............................................................................
+
+void create_MouseTask()
+{
+int			ret;
+pthread_t	tid;
+
+	mouse_t.deadline = 20;
+	mouse_t.period = 20;
+	mouse_t.tid = tid;
+
+	ret = pthread_create(&tid, NULL, mouse_task, (void *)&mouse_t);
+	if(ret != 0) {
+		perror("Error creating plot task\n");
 		exit(1);
 	}
 
+	printf("MouseTask created\n");
 }
 
 //.............................................................................
@@ -102,16 +127,18 @@ pthread_t	tid;
 int	main ()
 {
 
-	start_Calibration(30);
+	start_Calibration(10);
 
 	init();
 	draw_interface();
 
+	pthread_barrier_init(&barr,  NULL, 4);
+
+	create_MouseTask();
 	create_PlayTask(&tp_play1, "Bunny",
 			"Video1/f_", 379, 0, 0);
 	create_PlayTask(&tp_play2, "Earth",
 			"Video2/f_", 1440, 336, 3);
-
 	create_PlotTask();
 
 

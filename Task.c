@@ -24,7 +24,30 @@
 #define STEP_COUNT		0.000001
 
 #define UNUSED(x)		(void)x
-float N;
+
+
+float N;	// Value of counting task alone
+
+// Barrier is needed to avoid a thread to block due to the stark scheduling
+// Real time task has all the bandwidth and if a task like plotTask, that is
+// all active, changes scheduler before another task, so he cannot goes
+// in execution.
+// We must be sure that all task has set its scheduler to the right class
+// with the right priority
+pthread_barrier_t barr;
+
+
+void wait_on_barr()
+{
+int	rc;
+
+	rc = pthread_barrier_wait(&barr);
+	if((rc != 0) &&
+			(rc != PTHREAD_BARRIER_SERIAL_THREAD)) {
+		printf("Could not wait on barrier\n");
+		exit(1);
+	}
+}
 
 void set_affinity()
 {
@@ -99,8 +122,9 @@ task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
-	set_scheduler(99);
-//	set_affinity();
+	set_scheduler(90);
+	set_affinity();
+	wait_on_barr();
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
@@ -146,15 +170,15 @@ struct 	timespec t, now;
 int y = 0, x = ORIGIN_X;
 
 	UNUSED(p);
-//	set_affinity();
+	set_affinity();
 	set_scheduler(1);
+	wait_on_barr();
+
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
 		time_add_ms(&t, FAKE_PERIOD);
-
 		// Computing workload
 		workload = 1 - n / N;
-
 		// Plotting workload
 		y = workload * 100;
 		draw_point(x, y);
@@ -212,3 +236,36 @@ struct 	timespec t, now;
 	pthread_exit(NULL);
 }
 
+//.............................................................................
+// Body of the task that must handles mouse events
+//.............................................................................
+
+void *mouse_task(void *p)
+{
+int 		x, y, i, work;
+task_par 	*tp = (task_par *)p;
+
+	show_mouse(screen);
+
+	set_affinity();
+	set_scheduler(99);
+	wait_on_barr();
+
+	set_period(tp);
+	while(LOOP) {
+		if (mouse_b & 1) {
+			x = mouse_x;
+			y = mouse_y;
+			if(x > COLUMN * 2 && y < START_OVERLOAD_SCREEN){
+				ellipse(screen, (COLUMN * 5) / 2,
+						START_OVERLOAD_SCREEN / 2,
+						100,100,RANDOM );
+				printf("Mouse pressed!\n");
+				for(i=0; i<1000000; i++)
+					work++;
+			}
+		}
+		wait_for_period(tp);
+	}
+	pthread_exit(NULL);
+}
