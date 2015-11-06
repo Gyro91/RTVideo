@@ -7,6 +7,11 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef __USE_GNU
+#define __USE_GNU
+#endif
+#include <sched.h>
 #include "Periodicity.h"
 #include "Sched_new.h"
 #include "Draw.h"
@@ -16,12 +21,20 @@
 #define VIDEO_WIDTH		320
 
 #define LOOP			1
-#define FAKE_PERIOD		100
 #define STEP_COUNT		0.000001
 
 #define UNUSED(x)		(void)x
 float N;
 
+void set_affinity()
+{
+	cpu_set_t bitmap;
+
+	CPU_ZERO(&bitmap); // resetting bitmap
+	CPU_SET(0, &bitmap); // setting bitmap to zero
+
+	sched_setaffinity(0, sizeof(bitmap), &bitmap); // taking cpu-0
+}
 
 //.............................................................................
 // Load video on the screen
@@ -87,7 +100,7 @@ Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
 	set_scheduler(99);
-
+//	set_affinity();
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
@@ -133,6 +146,7 @@ struct 	timespec t, now;
 int y = 0, x = ORIGIN_X;
 
 	UNUSED(p);
+//	set_affinity();
 	set_scheduler(1);
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {

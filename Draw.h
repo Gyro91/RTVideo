@@ -43,6 +43,7 @@
 // Max dimension for the status text info of a video
 #define DIM_STATUS	28
 
+#define FAKE_PERIOD	150
 
 // Struct to define a point on the graph
 typedef struct point_ {
@@ -52,7 +53,7 @@ typedef struct point_ {
 
 // Struct to define a graph
 typedef struct graph_ {
-	int index;	// Actual point drawn
+	int index;		// Actual point drawn
 	point points[HEIGHT_AXIS_X];
 } graph;
 

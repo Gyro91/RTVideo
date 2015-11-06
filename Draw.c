@@ -2,6 +2,7 @@
 #include "Draw.h"
 
 graph workload;
+int start_time;
 
 //.............................................................................
 // Function for init Allegro stuffs
@@ -72,20 +73,22 @@ char 	uinteger[4];
 
 void draw_scaleX()
 {
-int		i, count = 1;
+int		i;
 char	uinteger[4];
-int step = SCALE_X * 20; // It's where is one second
+int step = SCALE_X * (1000 / FAKE_PERIOD); // It's where is one second
 
 	for (i=ORIGIN_X + step; i<=HEIGHT_AXIS_X; i+=step) {
 		// Drawing a ref value on the axis
 		line(screen, i, ORIGIN_Y,
 				i, ORIGIN_Y - 3, GOLD);
 		// Drawing a mark on the axis
-		sprintf(uinteger, "%d", count);
-		textout_ex(screen, font, uinteger,
+		if( start_time < 100) {
+			sprintf(uinteger, "%d", start_time);
+			textout_ex(screen, font, uinteger,
 				i, ORIGIN_Y + 5,
 				WHITE, BLACK);
-		count++;
+			start_time++;
+		}
 	}
 }
 
@@ -149,7 +152,7 @@ void draw_interface()
 			START_GRAPH_SCREEN - 1, BLUE);
 
 	// Drawing axes for Workload function
-
+	start_time = 1;
 	draw_cardinal_axes();
 }
 
