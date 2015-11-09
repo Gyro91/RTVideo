@@ -2,7 +2,10 @@
 #include "Draw.h"
 
 graph workload;
-int start_time;
+
+// Variables useful for updating axisX
+int start_time;	// Start point axisX
+int last_step;	// Last point axisX
 
 //.............................................................................
 // Function for init Allegro stuffs
@@ -88,8 +91,9 @@ int step = SCALE_X * (1000 / FAKE_PERIOD); // It's where is one second
 			textout_ex(screen, font, uinteger,
 				i, ORIGIN_Y + 5,
 				WHITE, BLACK);
-			start_time++;
 		}
+		start_time++;
+		last_step = i;
 	}
 }
 

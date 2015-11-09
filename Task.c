@@ -25,8 +25,9 @@
 
 #define UNUSED(x)		(void)x
 
-
-float N;	// Value of counting task alone
+extern int 	last_step;
+float 		N;			// Value of counting task alone
+int cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
 
 // Barrier is needed to avoid a thread to block due to the stark scheduling
 // Real time task has all the bandwidth and if a task like plotTask, that is
@@ -36,6 +37,8 @@ float N;	// Value of counting task alone
 // with the right priority
 pthread_barrier_t barr;
 
+pthread_mutex_t mux;	 // Define a mutex
+pthread_cond_t	cv;		// 	Define a cond. variable
 
 void wait_on_barr()
 {
@@ -122,7 +125,7 @@ task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
-	set_scheduler(90);
+	set_scheduler(99);
 	set_affinity();
 	wait_on_barr();
 	// Setup t for counting the frame rate in a second
@@ -184,7 +187,8 @@ int y = 0, x = ORIGIN_X;
 		draw_point(x, y);
 		// Moving to the next time
 		x = x + SCALE_X;
-		if(x > HEIGHT_AXIS_X) {
+		if(x == last_step) {
+			// Updating graph
 			clean_graph();
 			x = ORIGIN_X;
 		}
@@ -219,6 +223,7 @@ float 	f = 0;
 struct 	timespec t, now;
 
 	N = 0;
+	set_affinity();
 	set_scheduler(1);
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
@@ -242,10 +247,48 @@ struct 	timespec t, now;
 
 void *mouse_task(void *p)
 {
-int 		x, y, i, work;
+int 		x, y;
 task_par 	*tp = (task_par *)p;
 
 	show_mouse(screen);
+
+	pthread_mutex_init(&mux, NULL);
+	pthread_cond_init(&cv, NULL);
+
+	set_affinity();
+	set_scheduler(98);
+	wait_on_barr();
+
+	set_period(tp);
+	while(LOOP) {
+		pthread_mutex_lock(&mux);
+		if (mouse_b & 1) {
+			// if mouse pressed
+			x = mouse_x;
+			y = mouse_y;
+			if (x > COLUMN * 2 && y < START_OVERLOAD_SCREEN) {
+				// if pressed in the right area, wakes up thread
+				cond_mouse = 1;
+				pthread_cond_signal(&cv);
+			}
+			mouse_b = 0;
+		}
+		pthread_mutex_unlock(&mux);
+
+		wait_for_period(tp);
+	}
+	pthread_exit(NULL);
+}
+
+
+//.............................................................................
+// Body of the aperiodic task that must perform the action of a mouse event
+//.............................................................................
+
+void *action_mousetask(void *p)
+{
+int			i, work;
+task_par 	*tp = (task_par *)p;
 
 	set_affinity();
 	set_scheduler(99);
@@ -253,19 +296,24 @@ task_par 	*tp = (task_par *)p;
 
 	set_period(tp);
 	while(LOOP) {
-		if (mouse_b & 1) {
-			x = mouse_x;
-			y = mouse_y;
-			if(x > COLUMN * 2 && y < START_OVERLOAD_SCREEN){
-				ellipse(screen, (COLUMN * 5) / 2,
-						START_OVERLOAD_SCREEN / 2,
-						100,100,RANDOM );
-				printf("Mouse pressed!\n");
-				for(i=0; i<1000000; i++)
-					work++;
-			}
+		pthread_mutex_lock(&mux);
+		while (!cond_mouse) {
+			// Wait mouse pressed in the right area
+			pthread_cond_wait(&cv, &mux);
 		}
+		mouse_b = 0;
+		cond_mouse = 0;
+		pthread_mutex_unlock(&mux);
+		// Do a job
+		printf("Mouse pressed!\n");
+		ellipse(screen, (COLUMN * 5) / 2,
+					START_OVERLOAD_SCREEN / 2,
+					100, 100, RANDOM);
+		for(i=0; i<10000000; i++)
+			work++;
+
 		wait_for_period(tp);
 	}
 	pthread_exit(NULL);
 }
+

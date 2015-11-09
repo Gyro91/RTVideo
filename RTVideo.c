@@ -10,12 +10,15 @@
 #include "Sched_new.h"
 #include "Task.h"
 
+// Polling rate default is 125Hz
+#define POLLING_PERIOD	8
 
 // Structures for the 2 tasks that play videos
 task_par	tp_play1;
 task_par	tp_play2;
 
 task_par	mouse_t;
+task_par	action_mt;
 
 extern float N;
 
@@ -44,25 +47,33 @@ pthread_t	tid;
 }
 
 //.............................................................................
-// Function creates a task that must handles mouse events
+// Function creates a task that must recognize mouse events and the aperiodic
+// that must perform the action
 //.............................................................................
 
-void create_MouseTask()
+void create_MouseTasks()
 {
 int			ret;
 pthread_t	tid;
 
-	mouse_t.deadline = 20;
-	mouse_t.period = 20;
-	mouse_t.tid = tid;
+	mouse_t.deadline = mouse_t.period = POLLING_PERIOD;
+	action_mt.deadline = action_mt.period = POLLING_PERIOD;
 
 	ret = pthread_create(&tid, NULL, mouse_task, (void *)&mouse_t);
 	if(ret != 0) {
 		perror("Error creating plot task\n");
 		exit(1);
 	}
+	mouse_t.tid = tid;
 
-	printf("MouseTask created\n");
+	ret = pthread_create(&tid, NULL, action_mousetask, (void *)&action_mt);
+	if(ret != 0) {
+		perror("Error creating action mouse task\n");
+		exit(1);
+	}
+	action_mt.tid = tid;
+
+	printf("Mouse Tasks created\n");
 }
 
 //.............................................................................
@@ -107,8 +118,7 @@ void create_PlayTask(task_par *tp, char *namevideo, char *dir,
 int			ret;
 pthread_t	tid;
 
-	tp->period = 30;
-	tp->deadline = 30;
+	tp->deadline = tp->period = 30;
 
 	tp->Ifolder.nframes	= nframes;
 	tp->Ifolder.x_window = x;
@@ -127,14 +137,14 @@ pthread_t	tid;
 int	main ()
 {
 
-	start_Calibration(10);
+	start_Calibration(30);
 
 	init();
 	draw_interface();
 
-	pthread_barrier_init(&barr,  NULL, 4);
+	pthread_barrier_init(&barr,  NULL, 5);
 
-	create_MouseTask();
+	create_MouseTasks();
 	create_PlayTask(&tp_play1, "Bunny",
 			"Video1/f_", 379, 0, 0);
 	create_PlayTask(&tp_play2, "Earth",

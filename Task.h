@@ -38,5 +38,5 @@ extern void *play_task(void *p);
 extern void *calibration_task(void *p);
 extern void *plot_task(void *p);
 extern void *mouse_task(void *p);
-
+extern void *action_mousetask(void *p);
 #endif /* TASK_H_ */
