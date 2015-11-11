@@ -217,3 +217,16 @@ void clean_graph()
 	draw_cardinal_axes();
 	workload.index = 0;
 }
+
+//.............................................................................
+// The following function waits for a key pressed and extracts the
+// corresponding ascii code and scan code
+//.............................................................................
+
+void get_keycodes(char *scan)
+{
+int	k;
+
+	k = readkey(); 	// block until a key is pressed
+	*scan = k >> 8;	// get scan code
+}

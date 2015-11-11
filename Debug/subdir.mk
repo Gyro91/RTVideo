@@ -7,7 +7,8 @@ O_SRCS += \
 ../Draw.o \
 ../Periodicity.o \
 ../RTVideo.o \
-../Sched_new.o 
+../Sched_new.o \
+../Task.o 
 
 C_SRCS += \
 ../Draw.c \

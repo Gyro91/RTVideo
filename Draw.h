@@ -15,7 +15,7 @@
 #define WHITE  	65535
 #define GOLD 	makecol16(255, 215, 0)
 #define RED 	makecol16(255, 0, 0)
-#define RANDOM	makecol(rand()%255, rand()%255, rand()%255)
+#define RANDOM	makecol(rand()%256, rand()%256, rand()%256)
 
 // Constants for handling screen
 #define SCREEN_WIDTH 			1024
@@ -65,5 +65,6 @@ extern void draw_axisY(int, int);
 extern void text_state(int x, int y, char *status, int value);
 extern void draw_point(int x, int y);
 extern void clean_graph();
+extern void get_keycodes(char *scan);
 
 #endif /* DRAW_H_ */

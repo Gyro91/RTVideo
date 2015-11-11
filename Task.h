@@ -39,4 +39,7 @@ extern void *calibration_task(void *p);
 extern void *plot_task(void *p);
 extern void *mouse_task(void *p);
 extern void *action_mousetask(void *p);
+extern void *activator_task(void *p);
+extern void create_task(void *f(void *));
+
 #endif /* TASK_H_ */

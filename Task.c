@@ -28,6 +28,7 @@
 extern int 	last_step;
 float 		N;			// Value of counting task alone
 int cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
+task_par overload_tk;
 
 // Barrier is needed to avoid a thread to block due to the stark scheduling
 // Real time task has all the bandwidth and if a task like plotTask, that is
@@ -39,6 +40,7 @@ pthread_barrier_t barr;
 
 pthread_mutex_t mux;	 // Define a mutex
 pthread_cond_t	cv;		// 	Define a cond. variable
+
 
 void wait_on_barr()
 {
@@ -62,6 +64,17 @@ void set_affinity()
 	sched_setaffinity(0, sizeof(bitmap), &bitmap); // taking cpu-0
 }
 
+void create_task(void *f(void *))
+{
+int			ret;
+pthread_t	tid;
+
+	ret = pthread_create(&tid, NULL, f, NULL);
+	if(ret != 0) {
+		perror("Error creating task!\n");
+		exit(1);
+	}
+}
 //.............................................................................
 // Load video on the screen
 //.............................................................................
@@ -125,9 +138,10 @@ task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
-	set_scheduler(99);
+	set_scheduler(98);
 	set_affinity();
 	wait_on_barr();
+
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
@@ -256,7 +270,7 @@ task_par 	*tp = (task_par *)p;
 	pthread_cond_init(&cv, NULL);
 
 	set_affinity();
-	set_scheduler(98);
+	set_scheduler(99);
 	wait_on_barr();
 
 	set_period(tp);
@@ -317,3 +331,126 @@ task_par 	*tp = (task_par *)p;
 	pthread_exit(NULL);
 }
 
+
+//.............................................................................
+// Body of the  task that must create an overload task after a button press
+// Animation of a ball that goes from left to right and viceversa in the screen
+//.............................................................................
+
+void *overload_task1(void *p)
+{
+int 	step_initial = 10,
+		step_final = COLUMN - 12;
+int 	step = 1, actual_positionx = 10,
+		actual_positiony = START_OVERLOAD_SCREEN + 100;
+
+	set_scheduler(99);
+	set_affinity();
+
+	UNUSED(p);
+	set_period(&overload_tk);
+	while (LOOP) {
+		// Erases old ball
+		circlefill(screen, actual_positionx - step,
+				actual_positiony,
+				10, BLACK);
+		// Draws ball
+		circlefill(screen, actual_positionx,
+				actual_positiony,
+				10, GOLD);
+
+		actual_positionx += step;
+
+		// Check boundary limits
+		if (actual_positionx == step_final)
+			step = -1;
+		if (actual_positionx == step_initial)
+			step = 1;
+
+		// Overload
+		busy_wait(10);
+
+		wait_for_period(&overload_tk);
+	}
+	pthread_exit(NULL);
+}
+
+//.............................................................................
+// Body of the  task that must create an overload task after a button press
+//.............................................................................
+
+//.............................................................................
+// Body of the  task that must create an overload task after a button press
+//.............................................................................
+
+void *overload_task2(void *p)
+{
+	set_scheduler(99);
+	set_affinity();
+
+	UNUSED(p);
+	set_period(&overload_tk);
+	while(LOOP) {
+		circlefill(screen, (3 * COLUMN) / 2,
+				START_OVERLOAD_SCREEN + 100,
+				50, RANDOM);
+		busy_wait(32);
+		wait_for_period(&overload_tk);
+	}
+	pthread_exit(NULL);
+}
+
+//.............................................................................
+// Body of the  task that must create an overload task after a button press
+//.............................................................................
+
+void *overload_task3(void *p)
+{
+	set_scheduler(99);
+	set_affinity();
+
+	UNUSED(p);
+	set_period(&overload_tk);
+	while(LOOP) {
+		circlefill(screen, (5 * COLUMN) / 2,
+				START_OVERLOAD_SCREEN + 100,
+				50, RANDOM);
+		busy_wait(32);
+		wait_for_period(&overload_tk);
+	}
+	pthread_exit(NULL);
+}
+//.............................................................................
+// Body of the  task that must create an overload task after a button press
+//.............................................................................
+
+void *activator_task(void *p)
+{
+int 	count = 0;
+char	scan;
+
+	UNUSED(p);
+	set_affinity();
+	set_scheduler(99);
+	wait_on_barr();
+
+	overload_tk.period = 10;
+	overload_tk.deadline = 10;
+	while(count != 3) {
+		// Waiting for a input
+		get_keycodes(&scan);
+		if(scan == KEY_ENTER && count == 0)
+			create_task(overload_task1);
+		if(scan == KEY_ENTER && count == 1)
+			create_task(overload_task2);
+		if(scan == KEY_ENTER && count == 2)
+			create_task(overload_task3);
+		if(scan == KEY_ESC)
+			exit(1);
+		count++;
+	}
+	get_keycodes(&scan);
+	if(scan == KEY_ESC)
+		exit(1);
+	pthread_exit(NULL);
+}

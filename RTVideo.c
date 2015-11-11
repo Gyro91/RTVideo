@@ -13,6 +13,8 @@
 // Polling rate default is 125Hz
 #define POLLING_PERIOD	8
 
+#define NUM_SAMPLES		30
+
 // Structures for the 2 tasks that play videos
 task_par	tp_play1;
 task_par	tp_play2;
@@ -134,23 +136,29 @@ pthread_t	tid;
 	tp->tid = tid;
 }
 
+//.............................................................................
+// Function creates a task that must create an overload task after a button
+// press
+//.............................................................................
+
+
+
 int	main ()
 {
-
-	start_Calibration(30);
+	start_Calibration(NUM_SAMPLES);
 
 	init();
 	draw_interface();
 
-	pthread_barrier_init(&barr,  NULL, 5);
+	pthread_barrier_init(&barr,  NULL, 6);
 
 	create_MouseTasks();
 	create_PlayTask(&tp_play1, "Bunny",
 			"Video1/f_", 379, 0, 0);
 	create_PlayTask(&tp_play2, "Earth",
 			"Video2/f_", 1440, 336, 3);
+	create_task(activator_task);
 	create_PlotTask();
-
 
 	allegro_exit();
 
