@@ -7,7 +7,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <math.h>
 #ifndef __USE_GNU
 #define __USE_GNU
 #endif
@@ -16,19 +16,18 @@
 #include "Sched_new.h"
 #include "Draw.h"
 
-// Resolution for videos
-#define VIDEO_HEIGHT	200
-#define VIDEO_WIDTH		320
-
 #define LOOP			1
 #define STEP_COUNT		0.000001
 
-#define UNUSED(x)		(void)x
+
+task_par overload1_tk;
+task_par overload2_tk;
+task_par overload3_tk;
 
 extern int 	last_step;
 float 		N;			// Value of counting task alone
 int cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
-task_par overload_tk;
+unsigned int esc = 0;  	// If 0 the application can execute, if 1 it must exit
 
 // Barrier is needed to avoid a thread to block due to the stark scheduling
 // Real time task has all the bandwidth and if a task like plotTask, that is
@@ -36,11 +35,11 @@ task_par overload_tk;
 // in execution.
 // We must be sure that all task has set its scheduler to the right class
 // with the right priority
+
 pthread_barrier_t barr;
 
-pthread_mutex_t mux;	 // Define a mutex
-pthread_cond_t	cv;		// 	Define a cond. variable
-
+pthread_mutex_t mux;	 	// Define a mutex
+pthread_cond_t	cv;			// Define a cond. variable
 
 void wait_on_barr()
 {
@@ -54,39 +53,34 @@ int	rc;
 	}
 }
 
-void set_affinity()
-{
-	cpu_set_t bitmap;
-
-	CPU_ZERO(&bitmap); // resetting bitmap
-	CPU_SET(0, &bitmap); // setting bitmap to zero
-
-	sched_setaffinity(0, sizeof(bitmap), &bitmap); // taking cpu-0
-}
-
-void create_task(void *f(void *))
+pthread_t create_task(void *f(void *), task_par *tp)
 {
 int			ret;
 pthread_t	tid;
 
-	ret = pthread_create(&tid, NULL, f, NULL);
+	ret = pthread_create(&tid, NULL, f, (void *) tp);
 	if(ret != 0) {
 		perror("Error creating task!\n");
 		exit(1);
 	}
+
+	tp->tid = tid;
+
+	return tid;
 }
+
 //.............................................................................
 // Load video on the screen
 //.............................................................................
 
-void play_video(task_par *tp, int i)
+void play_video(task_par *tp)
 {
 char	filename[18];
 char	nframe[5];
 BITMAP	*bmp;
 Info_folder	*Ifolder =	&(tp->Ifolder);
 
-	sprintf(nframe, "%d", i);
+	sprintf(nframe, "%d", tp->frame_index);
 	strcpy(filename, Ifolder->path);
 	strcat(filename, nframe);
 	strcat(filename, ".bmp");
@@ -113,17 +107,28 @@ struct timespec now;
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	if (time_cmp(&now,t) >= 0) {
+		// If it is more than a second
+		// updating value framerate
 		tp->frame_r = tp->frame_c;
 		tp->frame_c = 0;
 		time_add_ms(t, 1000);
 	}
-
+	// Clear old state
+/*	rectfill(screen, Ifolder->x_window, VIDEO_HEIGHT,
+			Ifolder->x_window + COLUMN - 2,
+			START_OVERLOAD_SCREEN - 2 ,
+			BLACK);*/
+	// Name video on screen
 	textout_ex(screen, font, Ifolder->name,
-			Ifolder->x_window + 10, 200,
+			Ifolder->x_window + 10, VIDEO_HEIGHT,
 			WHITE, BLACK);
 
-	text_state(Ifolder->x_window + 80, 200, "Dmiss:", tp->dmiss);
-	text_state(Ifolder->x_window + 170, 200, "Frame-Rate(sec):", tp->frame_r);
+	// Dmiss on screen
+	text_state(Ifolder->x_window + 80, VIDEO_HEIGHT,
+			"Dmiss:", tp->dmiss);
+	// Frame Rate on screen
+	text_state(Ifolder->x_window + 170, VIDEO_HEIGHT,
+			"Frame-Rate(FPS):", tp->frame_r);
 
 }
 
@@ -133,22 +138,21 @@ struct timespec now;
 
 void *play_task(void *p)
 {
-int				i = 1;
 task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
-	set_scheduler(98);
+	set_scheduler(tp->priority);
 	set_affinity();
 	wait_on_barr();
 
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
-	while(LOOP) {
+	while(!esc) {
 
 		// Loading the video on the screen
-		play_video(tp, i);
+		play_video(tp);
 
 		// Loading Info video on the screen
 		load_state(tp, &t);
@@ -159,14 +163,13 @@ struct timespec	t;
 		wait_for_period(tp);
 
 		// Updating index to the next frame in the folder
-		i++;
+		tp->frame_index++;
 		// Counting the frames in a second
 		tp->frame_c++;
 
-		if (i == (Ifolder->nframes + 1))
-			i = 1;
+		if (tp->frame_index == (Ifolder->nframes + 1))
+			tp->frame_index = 1;
 	}
-
 	pthread_exit(NULL);
 }
 
@@ -182,13 +185,13 @@ struct timespec	t;
 
 void *plot_task(void *p)
 {
-float 	n = 0, workload;
-struct 	timespec t, now;
-int y = 0, x = ORIGIN_X;
+float 				n = 0, workload;
+struct 	timespec 	t, now;
+int 				y = 0, x = ORIGIN_X;
+task_par 			*tp = (task_par*)p;
 
-	UNUSED(p);
 	set_affinity();
-	set_scheduler(1);
+	set_scheduler(tp->priority);
 	wait_on_barr();
 
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -212,7 +215,7 @@ int y = 0, x = ORIGIN_X;
 			n += STEP_COUNT;
 			clock_gettime(CLOCK_MONOTONIC, &now);
 		} while (time_cmp(&now, &t) < 0);
-	} while (LOOP);
+	} while (!esc);
 
 	pthread_exit(NULL);
 }
@@ -237,12 +240,13 @@ float 	f = 0;
 struct 	timespec t, now;
 
 	N = 0;
+	set_scheduler(LOW_PRIORITY);
 	set_affinity();
-	set_scheduler(1);
+
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	do {
 		time_add_ms(&t, FAKE_PERIOD);
-		if( f > N)
+		if(f > N)
 			N = f;
 		f = 0;
 		sec--;
@@ -266,15 +270,16 @@ task_par 	*tp = (task_par *)p;
 
 	show_mouse(screen);
 
+	enable_hardware_cursor();
 	pthread_mutex_init(&mux, NULL);
 	pthread_cond_init(&cv, NULL);
 
+	set_scheduler(tp->priority);
 	set_affinity();
-	set_scheduler(99);
 	wait_on_barr();
 
 	set_period(tp);
-	while(LOOP) {
+	while(!esc) {
 		pthread_mutex_lock(&mux);
 		if (mouse_b & 1) {
 			// if mouse pressed
@@ -291,6 +296,7 @@ task_par 	*tp = (task_par *)p;
 
 		wait_for_period(tp);
 	}
+
 	pthread_exit(NULL);
 }
 
@@ -304,12 +310,12 @@ void *action_mousetask(void *p)
 int			i, work;
 task_par 	*tp = (task_par *)p;
 
+	set_scheduler(tp->priority);
 	set_affinity();
-	set_scheduler(99);
 	wait_on_barr();
 
 	set_period(tp);
-	while(LOOP) {
+	while(!esc) {
 		pthread_mutex_lock(&mux);
 		while (!cond_mouse) {
 			// Wait mouse pressed in the right area
@@ -328,6 +334,7 @@ task_par 	*tp = (task_par *)p;
 
 		wait_for_period(tp);
 	}
+
 	pthread_exit(NULL);
 }
 
@@ -339,21 +346,21 @@ task_par 	*tp = (task_par *)p;
 
 void *overload_task1(void *p)
 {
-int 	step_initial = 10,
-		step_final = COLUMN - 12;
-int 	step = 1, actual_positionx = 10,
-		actual_positiony = START_OVERLOAD_SCREEN + 100;
+int 		step_initial = 10,
+			step_final = COLUMN - 12;
+int 		step = 1, actual_positionx = 10,
+			actual_positiony = START_OVERLOAD_SCREEN + 100;
+task_par 	*tp = (task_par*)p;
 
-	set_scheduler(99);
 	set_affinity();
+	set_scheduler(tp->priority);
 
-	UNUSED(p);
-	set_period(&overload_tk);
-	while (LOOP) {
+	set_period(tp);
+	while (!esc) {
 		// Erases old ball
-		circlefill(screen, actual_positionx - step,
-				actual_positiony,
-				10, BLACK);
+		rectfill(screen, 0, START_OVERLOAD_SCREEN + 1,
+				COLUMN - 1, START_GRAPH_SCREEN - 2,
+				BLACK);
 		// Draws ball
 		circlefill(screen, actual_positionx,
 				actual_positiony,
@@ -368,89 +375,117 @@ int 	step = 1, actual_positionx = 10,
 			step = 1;
 
 		// Overload
-		busy_wait(10);
+		busy_wait(5);
 
-		wait_for_period(&overload_tk);
+		wait_for_period(tp);
 	}
 	pthread_exit(NULL);
 }
 
 //.............................................................................
 // Body of the  task that must create an overload task after a button press
-//.............................................................................
-
-//.............................................................................
-// Body of the  task that must create an overload task after a button press
+// The animation is a blinking circle
 //.............................................................................
 
 void *overload_task2(void *p)
 {
-	set_scheduler(99);
+task_par *tp = (task_par*)p;
+
+	set_scheduler(tp->priority);
 	set_affinity();
 
-	UNUSED(p);
-	set_period(&overload_tk);
-	while(LOOP) {
+	set_period(tp);
+	while(!esc) {
+		// Draw Animation
 		circlefill(screen, (3 * COLUMN) / 2,
 				START_OVERLOAD_SCREEN + 100,
 				50, RANDOM);
-		busy_wait(32);
-		wait_for_period(&overload_tk);
+		// Overload
+		busy_wait(30);
+
+		wait_for_period(tp);
 	}
+
 	pthread_exit(NULL);
 }
 
 //.............................................................................
 // Body of the  task that must create an overload task after a button press
+// The animation is like a radar
 //.............................................................................
+
 
 void *overload_task3(void *p)
 {
-	set_scheduler(99);
+double		xf = ((5 * COLUMN) / 2) + 80,
+			yf = (3 * START_OVERLOAD_SCREEN) / 2;
+// Center point
+double 		cx = (5 * COLUMN) / 2,
+			cy = (3 * START_OVERLOAD_SCREEN) / 2;
+// angle is 1 degree in radius
+float 		angle = 0.0174533;
+task_par 	*tp = (task_par*)p;
+
+	set_scheduler(tp->priority);
 	set_affinity();
 
-	UNUSED(p);
-	set_period(&overload_tk);
-	while(LOOP) {
-		circlefill(screen, (5 * COLUMN) / 2,
-				START_OVERLOAD_SCREEN + 100,
-				50, RANDOM);
-		busy_wait(32);
-		wait_for_period(&overload_tk);
+	set_period(tp);
+	while (!esc) {
+		// Clean a portion of screen
+		rectfill(screen, 2 * COLUMN + 1, START_OVERLOAD_SCREEN + 1,
+						 3 * COLUMN - 1, START_GRAPH_SCREEN - 2,
+						BLACK);
+		// Rotating a point of one degree
+		xf = (xf - cx) * cos(angle) - (yf - cy) * sin(angle) + cx;
+		yf = (xf - cx) * sin(angle) +  (yf - cy) * cos(angle) + cy;
+		line(screen, cx, cy, xf, yf, RED);
+		circle(screen, cx, cy, 80, RED);
+
+		// Overload
+		busy_wait(30);
+
+		wait_for_period(tp);
 	}
+
 	pthread_exit(NULL);
 }
+
 //.............................................................................
 // Body of the  task that must create an overload task after a button press
 //.............................................................................
 
 void *activator_task(void *p)
 {
-int 	count = 0;
-char	scan;
+int 		count = 0;
+char		scan;
+task_par 	*tp = (task_par*)p;
 
-	UNUSED(p);
 	set_affinity();
-	set_scheduler(99);
+	set_scheduler(tp->priority);
 	wait_on_barr();
 
-	overload_tk.period = 10;
-	overload_tk.deadline = 10;
-	while(count != 3) {
+	overload1_tk.period = overload1_tk.deadline = 5;
+	overload2_tk.period = overload2_tk.deadline = 40;
+	overload3_tk.period = overload2_tk.deadline = 5;
+	overload1_tk.priority = overload2_tk.priority =
+			overload3_tk.priority = HIGH_PRIORITY;
+
+	while(count < 4) {
 		// Waiting for a input
 		get_keycodes(&scan);
 		if(scan == KEY_ENTER && count == 0)
-			create_task(overload_task1);
+			create_task(overload_task1, &overload1_tk);
 		if(scan == KEY_ENTER && count == 1)
-			create_task(overload_task2);
+			create_task(overload_task2, &overload2_tk);
 		if(scan == KEY_ENTER && count == 2)
-			create_task(overload_task3);
-		if(scan == KEY_ESC)
-			exit(1);
+			create_task(overload_task3, &overload3_tk);
+		if(scan == KEY_ESC) {
+			count = 3;
+			esc = 1;
+		}
+
 		count++;
 	}
-	get_keycodes(&scan);
-	if(scan == KEY_ESC)
-		exit(1);
+
 	pthread_exit(NULL);
 }

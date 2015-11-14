@@ -15,6 +15,7 @@
 #include <sys/syscall.h>
 #include <pthread.h>
 
+
 #define gettid() syscall(__NR_gettid)
 
 #define SCHED_DEADLINE	6
@@ -64,5 +65,9 @@ extern int sched_getattr(pid_t pid,
                   unsigned int flags);
 
 extern void set_scheduler(int);
+
+extern void set_affinity();
+
+extern void setup_affinity_folder();
 
 #endif /* SCHED_NEW_H_ */

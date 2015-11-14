@@ -34,6 +34,15 @@
 #define TIP_AXIS_X 			943
 #define HEIGHT_AXIS_X 		940
 #define BASE_AXIS 			3
+// Constants useful for displaying videos
+#define VIDEO1_X			0
+#define VIDEO1_Y			0
+#define VIDEO2_X			336
+#define VIDEO2_Y			3
+// Resolution for videos
+#define VIDEO_HEIGHT	200
+#define VIDEO_WIDTH		320
+
 // How many pixel for 100ms
 #define SCALE_X				4
 // How many pixel for 1%
@@ -43,7 +52,7 @@
 #define DIM_INT		11
 // Max dimension for the status text info of a video
 #define DIM_STATUS	28
-
+// Fake Period of the counting task
 #define FAKE_PERIOD	150
 
 // Struct to define a point on the graph

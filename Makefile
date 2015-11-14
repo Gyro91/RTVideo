@@ -49,7 +49,7 @@ CFLAGS   	=  -std=c99 -Wpedantic -Wall -Wextra -g3 \
 			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS) 
 
 # I'm not sure librt is needed but let it stay there for the time being
-LDFLAGS  	= -lpthread -lrt $(ALLEGRO_LDFLAGS) $(MYLIBS_LDFLAGS)
+LDFLAGS  	= -lpthread -lrt $(ALLEGRO_LDFLAGS) $(MYLIBS_LDFLAGS) -lm
 ################################################################################
 
 #### debug disable #############################################################
