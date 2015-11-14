@@ -1,3 +1,3 @@
-Draw.d: ../Draw.c ../Draw.h
+Draw.o: ../Draw.c ../Draw.h
 
 ../Draw.h:

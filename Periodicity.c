@@ -7,6 +7,9 @@
 #include "Periodicity.h"
 #include <assert.h>
 #include <limits.h>
+#include <sched.h>
+#include "Sched_new.h"
+extern __u32 policy;
 
 //.............................................................................
 // Copies the second passed time to the first one
@@ -96,8 +99,11 @@ struct timespec	t;
 
 void wait_for_period(task_par *tp)
 {
-	clock_nanosleep(CLOCK_MONOTONIC,
-			TIMER_ABSTIME, &(tp->at), NULL);
+	if(policy == SCHED_FIFO)
+		clock_nanosleep(CLOCK_MONOTONIC,
+				TIMER_ABSTIME, &(tp->at), NULL);
+	if(policy == SCHED_DEADLINE)
+		sched_yield();
 	time_add_ms(&(tp->at), tp->period);
 	time_add_ms(&(tp->dl), tp->deadline);
 }

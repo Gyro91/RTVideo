@@ -44,7 +44,7 @@ ALLEGRO_CFLAGS	= $(shell pkg-config --cflags allegro)
 
 
 #### flags #####################################################################
-CPPFLAGS 	= $(CPPFLG_D_$(D)) -D_GNU_SOURCE
+CPPFLAGS 	= $(CPPFLG_D_$(D)) -D_GNU_SOURCE 
 CFLAGS   	=  -std=c99 -Wpedantic -Wall -Wextra -g3 \
 			  $(ALLEGRO_CFLAGS) $(MYLIBS_CFLAGS) 
 

@@ -24,10 +24,11 @@ task_par overload1_tk;
 task_par overload2_tk;
 task_par overload3_tk;
 
-extern int 	last_step;
-float 		N;			// Value of counting task alone
-int cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
-unsigned int esc = 0;  	// If 0 the application can execute, if 1 it must exit
+extern int 		last_step;
+extern __u32 	policy;
+float 			N;			// Value of counting task alone
+int 			cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
+unsigned int 	esc = 0;  	// If 0 the application can execute, if 1 it must exit
 
 // Barrier is needed to avoid a thread to block due to the stark scheduling
 // Real time task has all the bandwidth and if a task like plotTask, that is
@@ -36,10 +37,10 @@ unsigned int esc = 0;  	// If 0 the application can execute, if 1 it must exit
 // We must be sure that all task has set its scheduler to the right class
 // with the right priority
 
-pthread_barrier_t barr;
+pthread_barrier_t 	barr;
 
-pthread_mutex_t mux;	 	// Define a mutex
-pthread_cond_t	cv;			// Define a cond. variable
+pthread_mutex_t 	mux;	 	// Define a mutex
+pthread_cond_t		cv;			// Define a cond. variable
 
 void wait_on_barr()
 {
@@ -113,11 +114,12 @@ struct timespec now;
 		tp->frame_c = 0;
 		time_add_ms(t, 1000);
 	}
+	if(tp->frame_r < 10)
 	// Clear old state
-/*	rectfill(screen, Ifolder->x_window, VIDEO_HEIGHT,
-			Ifolder->x_window + COLUMN - 2,
-			START_OVERLOAD_SCREEN - 2 ,
-			BLACK);*/
+		rectfill(screen, Ifolder->x_window, VIDEO_HEIGHT,
+				Ifolder->x_window + COLUMN - 2,
+				START_OVERLOAD_SCREEN - 2 ,
+				BLACK);
 	// Name video on screen
 	textout_ex(screen, font, Ifolder->name,
 			Ifolder->x_window + 10, VIDEO_HEIGHT,
@@ -142,7 +144,7 @@ task_par		*tp = (task_par *)p;
 Info_folder		*Ifolder =	&(((task_par *)p)->Ifolder);
 struct timespec	t;
 
-	set_scheduler(tp->priority);
+	set_scheduler(policy, tp);
 	set_affinity();
 	wait_on_barr();
 
@@ -190,8 +192,8 @@ struct 	timespec 	t, now;
 int 				y = 0, x = ORIGIN_X;
 task_par 			*tp = (task_par*)p;
 
+	set_sched_fifo(tp);
 	set_affinity();
-	set_scheduler(tp->priority);
 	wait_on_barr();
 
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -238,9 +240,11 @@ void *calibration_task(void *p)
 int 	sec = *(int *)p;
 float 	f = 0;
 struct 	timespec t, now;
+task_par tp;
 
+	tp.priority = LOW_PRIORITY;
 	N = 0;
-	set_scheduler(LOW_PRIORITY);
+	set_scheduler(SCHED_FIFO, &tp);
 	set_affinity();
 
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -268,15 +272,15 @@ void *mouse_task(void *p)
 int 		x, y;
 task_par 	*tp = (task_par *)p;
 
-	show_mouse(screen);
-
-	enable_hardware_cursor();
 	pthread_mutex_init(&mux, NULL);
 	pthread_cond_init(&cv, NULL);
 
-	set_scheduler(tp->priority);
+	set_sched_fifo(tp);
 	set_affinity();
 	wait_on_barr();
+
+	show_mouse(screen);
+	enable_hardware_cursor();
 
 	set_period(tp);
 	while(!esc) {
@@ -310,7 +314,7 @@ void *action_mousetask(void *p)
 int			i, work;
 task_par 	*tp = (task_par *)p;
 
-	set_scheduler(tp->priority);
+	set_scheduler(policy, tp);
 	set_affinity();
 	wait_on_barr();
 
@@ -352,8 +356,8 @@ int 		step = 1, actual_positionx = 10,
 			actual_positiony = START_OVERLOAD_SCREEN + 100;
 task_par 	*tp = (task_par*)p;
 
+	set_scheduler(policy, tp);
 	set_affinity();
-	set_scheduler(tp->priority);
 
 	set_period(tp);
 	while (!esc) {
@@ -391,7 +395,7 @@ void *overload_task2(void *p)
 {
 task_par *tp = (task_par*)p;
 
-	set_scheduler(tp->priority);
+	set_scheduler(policy, tp);
 	set_affinity();
 
 	set_period(tp);
@@ -426,7 +430,7 @@ double 		cx = (5 * COLUMN) / 2,
 float 		angle = 0.0174533;
 task_par 	*tp = (task_par*)p;
 
-	set_scheduler(tp->priority);
+	set_scheduler(policy, tp);
 	set_affinity();
 
 	set_period(tp);
@@ -460,13 +464,13 @@ int 		count = 0;
 char		scan;
 task_par 	*tp = (task_par*)p;
 
+	set_sched_fifo(tp);
 	set_affinity();
-	set_scheduler(tp->priority);
 	wait_on_barr();
 
 	overload1_tk.period = overload1_tk.deadline = 5;
 	overload2_tk.period = overload2_tk.deadline = 40;
-	overload3_tk.period = overload2_tk.deadline = 5;
+	overload3_tk.period = overload3_tk.deadline = 5;
 	overload1_tk.priority = overload2_tk.priority =
 			overload3_tk.priority = HIGH_PRIORITY;
 
@@ -480,7 +484,7 @@ task_par 	*tp = (task_par*)p;
 		if(scan == KEY_ENTER && count == 2)
 			create_task(overload_task3, &overload3_tk);
 		if(scan == KEY_ESC) {
-			count = 3;
+			count = 4;
 			esc = 1;
 		}
 

@@ -6,6 +6,7 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "Draw.h"
 #include "Sched_new.h"
 #include "Task.h"
@@ -14,9 +15,8 @@
 #define POLLING_PERIOD	8
 #define VIDEO_PERIOD	30
 // Num sample for Calibration
-#define NUM_SAMPLES		40
-// Num tasks in the application
-#define NUM_TASKS		6
+#define NUM_SAMPLES		30
+
 #define NUM_FRAME1		379
 #define NUM_FRAME2		1440
 
@@ -28,7 +28,68 @@ task_par 	activation_t;
 task_par 	plot_t;
 
 extern float N;
+__u32 policy = 0;
 
+
+
+//.............................................................................
+// Function checks the policy argument
+//.............................................................................
+
+void check_arg()
+{
+int 	ok = 0;
+
+	if (policy == SCHED_DEADLINE) {
+		printf("Policy: SCHED_DEADLINE\n");
+		ok = 1;
+	}
+	if (policy == SCHED_FIFO) {
+		printf("Policy: SCHED_FIFO\n");
+		ok = 1;
+	}
+
+	if (ok == 0) {
+		printf("Policy value is not correct\n");
+		exit(1);
+	}
+}
+
+//.............................................................................
+// Function takes the policy argument
+//.............................................................................
+
+void get_arg(int argc, char *argv[])
+{
+char	c;
+
+	if (argv[optind] == NULL || argv[optind + 1] == NULL) {
+		printf("Mandatory argument(s) missing\n");
+		exit(1);
+	}
+	while ((c = getopt (argc, argv, "s:")) != -1) {
+		switch (c)
+		{
+		case 's':
+			policy = atoi(optarg);
+			break;
+		case '?':
+			if (optopt == 't')
+				fprintf (stderr, "Option -%c requires an argument.\n",
+						optopt);
+			else if (isprint (optopt))
+				fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+			else
+				fprintf (stderr,
+						"Unknown option character `\\x%x'.\n",
+						optopt);
+			abort();
+		default:
+			abort();
+		}
+	}
+
+}
 
 //.............................................................................
 // Function creates a task for the Calibration of the counter variable
@@ -129,8 +190,12 @@ pthread_t 	tid[NUM_TASKS];
 		}
 	}
 }
-int	main ()
+int	main (int argc, char *argv[])
 {
+	// Getting and checking policy
+	get_arg(argc, argv);
+	check_arg();
+
 	setup_affinity_folder();
 	// Calibration for portability
 	start_Calibration(NUM_SAMPLES);

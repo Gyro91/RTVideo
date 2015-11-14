@@ -13,6 +13,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "Sched_new.h"
+#define PERIODIC_TASKS 	6
+// Utilizazion factor for one CPU
+#define Uf			0.95
 
 pthread_mutex_t console_mux = PTHREAD_MUTEX_INITIALIZER;
 
@@ -31,14 +34,15 @@ int sched_getattr(pid_t pid,
   return syscall(__NR_sched_getattr, pid, attr, size, flags);
 }
 
-void set_scheduler(int priority) {
+void set_sched_fifo(task_par *tp)
+{
 int		ret;
 struct 	sched_attr attr;
 
 	attr.size = sizeof(attr);
 	attr.sched_flags =    0;
 	attr.sched_nice =     0;
-	attr.sched_priority = priority;
+	attr.sched_priority = tp->priority;
 
 	attr.sched_policy =   SCHED_FIFO;
 	attr.sched_runtime =  0;
@@ -56,19 +60,62 @@ struct 	sched_attr attr;
 	}
 }
 
+void set_sched_deadline(task_par *tp)
+{
+int		ret;
+struct 	sched_attr attr;
+
+	attr.size = sizeof(attr);
+	attr.sched_flags =    0;
+	attr.sched_nice =     0;
+	attr.sched_priority = 0;
+
+	attr.sched_policy = SCHED_DEADLINE;
+	attr.sched_runtime =  tp-> deadline * (Uf / PERIODIC_TASKS)
+			* 1000 * 1000;
+	attr.sched_period =   tp->period * 1000 * 1000;
+	attr.sched_deadline = tp->deadline * 1000 * 1000;
+
+	ret = sched_setattr(0, &attr, 0);
+	if (ret < 0) {
+		pthread_mutex_lock(&console_mux);
+		perror("ERROR: sched_setattr");
+		perror("ERROR: sched_setattr");
+		printf("runtime: %lld\nperiod: %lld\ndeadline: %lld\n",
+		           attr.sched_runtime,
+		           attr.sched_period,
+		           attr.sched_deadline);
+		pthread_mutex_unlock(&console_mux);
+		pthread_exit(NULL);
+	}
+}
+
+
+
+void set_scheduler(__u32 policy, task_par *tp)
+{
+	if ( policy == SCHED_FIFO)
+		set_sched_fifo(tp);
+
+	if ( policy == SCHED_DEADLINE)
+		set_sched_deadline(tp);
+
+}
+
+
 
 int test_affinity()
 {
 	cpu_set_t bitmap;
 
 	sched_getaffinity(0,sizeof(bitmap), &bitmap);
-	if( CPU_COUNT(&bitmap) == 1 && CPU_ISSET(0, &bitmap) != 0 )
+	if(CPU_COUNT(&bitmap) == 1 && CPU_ISSET(0, &bitmap) != 0)
 		return 1;
 	else
 		return 0;
 }
 
-void set_affinity()
+void set_affinityx()
 {
 cpu_set_t	bitmap;
 
@@ -78,8 +125,14 @@ cpu_set_t	bitmap;
 	// Taking cpu-0
 	sched_setaffinity(0, sizeof(bitmap), &bitmap);
 
-	if(test_affinity() == 0)
+	if(test_affinity() == 0) {
+		pthread_mutex_lock(&console_mux);
+		printf("Error set affinity\n");
+		pthread_mutex_unlock(&console_mux);
 		exit(1);
+	}
+
+
 }
 
 void setup_affinity_folder()
@@ -124,7 +177,7 @@ char 	cpuset_file[100];
 	fclose(f);
 }
 
-void set_affinityx()
+void set_affinity()
 {
 FILE * f;
 char cpuset_file[100];
@@ -142,6 +195,10 @@ char cpuset_file[100];
 
 	fclose(f);
 
-	if(test_affinity() == 0)
+	if (test_affinity() == 0) {
+		pthread_mutex_lock(&console_mux);
+		printf("Error set affinity\n");
+		pthread_mutex_unlock(&console_mux);
 		exit(1);
+	}
 }

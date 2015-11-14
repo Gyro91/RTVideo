@@ -14,7 +14,10 @@
 #include <linux/types.h>
 #include <sys/syscall.h>
 #include <pthread.h>
+#include "Task.h"
 
+// Num tasks in the application (without overload tasks)
+#define NUM_TASKS		6
 
 #define gettid() syscall(__NR_gettid)
 
@@ -64,8 +67,8 @@ extern int sched_getattr(pid_t pid,
                   unsigned int size,
                   unsigned int flags);
 
-extern void set_scheduler(int);
-
+extern void set_scheduler(__u32, task_par *tp);
+extern void set_sched_fifo(task_par *tp);
 extern void set_affinity();
 
 extern void setup_affinity_folder();
