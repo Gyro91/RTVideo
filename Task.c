@@ -54,6 +54,10 @@ int	rc;
 	}
 }
 
+//.............................................................................
+// Creates a task with the given parameters
+//.............................................................................
+
 pthread_t create_task(void *f(void *), task_par *tp)
 {
 int			ret;
@@ -68,6 +72,19 @@ pthread_t	tid;
 	tp->tid = tid;
 
 	return tid;
+}
+
+//.............................................................................
+// Creates an overload task f withparameters tp and modify count and scan
+// for the activation task
+//.............................................................................
+
+void activate_overloadtask(void *f(void *), task_par *tp, int *count,
+		char *scan)
+{
+	create_task(f, tp);
+	*count += 1;
+	*scan = 0;
 }
 
 //.............................................................................
@@ -274,26 +291,28 @@ task_par 	*tp = (task_par *)p;
 
 	pthread_mutex_init(&mux, NULL);
 	pthread_cond_init(&cv, NULL);
+	show_mouse(screen);
 
-	set_sched_fifo(tp);
+	set_scheduler(policy, tp);
 	set_affinity();
 	wait_on_barr();
 
-	show_mouse(screen);
-	enable_hardware_cursor();
+	if(policy == SCHED_DEADLINE)
+		enable_hardware_cursor();
 
 	set_period(tp);
 	while(!esc) {
 		pthread_mutex_lock(&mux);
 		if (mouse_b & 1) {
-			// if mouse pressed
+			// If mouse sx pressed
 			x = mouse_x;
 			y = mouse_y;
 			if (x > COLUMN * 2 && y < START_OVERLOAD_SCREEN) {
-				// if pressed in the right area, wakes up thread
+				// If pressed in the right area, wakes up thread
 				cond_mouse = 1;
 				pthread_cond_signal(&cv);
 			}
+			// Reset mouse state
 			mouse_b = 0;
 		}
 		pthread_mutex_unlock(&mux);
@@ -432,6 +451,7 @@ task_par 	*tp = (task_par*)p;
 
 	set_scheduler(policy, tp);
 	set_affinity();
+	enable_hardware_cursor();
 
 	set_period(tp);
 	while (!esc) {
@@ -477,18 +497,21 @@ task_par 	*tp = (task_par*)p;
 	while(count < 4) {
 		// Waiting for a input
 		get_keycodes(&scan);
-		if(scan == KEY_ENTER && count == 0)
-			create_task(overload_task1, &overload1_tk);
-		if(scan == KEY_ENTER && count == 1)
-			create_task(overload_task2, &overload2_tk);
-		if(scan == KEY_ENTER && count == 2)
-			create_task(overload_task3, &overload3_tk);
+		// Check which tasks must be created
+		if (scan == KEY_ENTER && count == 0)
+			activate_overloadtask(overload_task1, &overload1_tk,
+					&count, &scan);
+		if (scan == KEY_ENTER && count == 1)
+			activate_overloadtask(overload_task2, &overload2_tk,
+				&count, &scan);
+		if (scan == KEY_ENTER && count == 2)
+			activate_overloadtask(overload_task3, &overload3_tk,
+				&count, &scan);
+
 		if(scan == KEY_ESC) {
 			count = 4;
 			esc = 1;
 		}
-
-		count++;
 	}
 
 	pthread_exit(NULL);

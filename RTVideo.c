@@ -16,20 +16,21 @@
 #define VIDEO_PERIOD	30
 // Num sample for Calibration
 #define NUM_SAMPLES		30
+// Num tasks in the application (without overload tasks)
+#define NUM_TASKS		6
 
 #define NUM_FRAME1		379
 #define NUM_FRAME2		1440
 
-task_par	tp_play1;
-task_par	tp_play2;
-task_par	mouse_t;
-task_par	action_mt;
-task_par 	activation_t;
-task_par 	plot_t;
+task_par	tp_play1;		// Task plays Bunny's video
+task_par	tp_play2;		// Task that plays Earth's video
+task_par	mouse_t;		// Task that checks periodic mouse events
+task_par	action_mt;		// Aperiodic Task that perform mouse events
+task_par 	activation_t;	// Task which activates overload task
+task_par 	plot_t; 		// Task that must plot workload function
 
 extern float N;
-__u32 policy = 0;
-
+__u32 policy = 0; // Policy of the scheduler
 
 
 //.............................................................................
@@ -163,9 +164,16 @@ void init_Tasks()
 
 	// Init Activation Task
 	activation_t.priority = HIGH_PRIORITY;
+	activation_t.deadline = activation_t.period = POLLING_PERIOD;
 
 	// Init Plot Task
 	plot_t.priority = LOW_PRIORITY;
+	/*
+	if(policy == SCHED_FIFO)
+		plot_t.priority = LOW_PRIORITY;
+	else
+		plot_t.priority = 1;// HIGH_PRIORITY - 1;
+	*/
 }
 
 void create_Tasks()
@@ -192,10 +200,10 @@ pthread_t 	tid[NUM_TASKS];
 }
 int	main (int argc, char *argv[])
 {
-	// Getting and checking policy
+	// Getting and Checking policy
 	get_arg(argc, argv);
 	check_arg();
-
+	// Init folder for affinity
 	setup_affinity_folder();
 	// Calibration for portability
 	start_Calibration(NUM_SAMPLES);

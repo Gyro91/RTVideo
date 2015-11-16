@@ -16,9 +16,6 @@
 #include <pthread.h>
 #include "Task.h"
 
-// Num tasks in the application (without overload tasks)
-#define NUM_TASKS		6
-
 #define gettid() syscall(__NR_gettid)
 
 #define SCHED_DEADLINE	6
@@ -69,8 +66,9 @@ extern int sched_getattr(pid_t pid,
 
 extern void set_scheduler(__u32, task_par *tp);
 extern void set_sched_fifo(task_par *tp);
+extern void set_sched_deadline(task_par *tp);
 extern void set_affinity();
-
+extern void set_sched_other();
 extern void setup_affinity_folder();
 
 #endif /* SCHED_NEW_H_ */

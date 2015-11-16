@@ -13,9 +13,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "Sched_new.h"
-#define PERIODIC_TASKS 	6
+#define ALL_TASKS 	9
 // Utilizazion factor for one CPU
-#define Uf			0.95
+#define Uf			1
 
 pthread_mutex_t console_mux = PTHREAD_MUTEX_INITIALIZER;
 
@@ -33,6 +33,10 @@ int sched_getattr(pid_t pid,
 {
   return syscall(__NR_sched_getattr, pid, attr, size, flags);
 }
+
+//.............................................................................
+// Sets SCHED_FIFO
+//.............................................................................
 
 void set_sched_fifo(task_par *tp)
 {
@@ -60,6 +64,10 @@ struct 	sched_attr attr;
 	}
 }
 
+//.............................................................................
+// Sets SCHED_DEADLINE
+//.............................................................................
+
 void set_sched_deadline(task_par *tp)
 {
 int		ret;
@@ -71,7 +79,7 @@ struct 	sched_attr attr;
 	attr.sched_priority = 0;
 
 	attr.sched_policy = SCHED_DEADLINE;
-	attr.sched_runtime =  tp-> deadline * (Uf / PERIODIC_TASKS)
+	attr.sched_runtime =  tp-> deadline * ((float)Uf / (float)(ALL_TASKS))
 			* 1000 * 1000;
 	attr.sched_period =   tp->period * 1000 * 1000;
 	attr.sched_deadline = tp->deadline * 1000 * 1000;
@@ -91,6 +99,42 @@ struct 	sched_attr attr;
 }
 
 
+//.............................................................................
+// Sets SCHED_OTHER
+//.............................................................................
+
+void set_sched_other()
+{
+int		ret;
+struct 	sched_attr attr;
+
+	attr.size = sizeof(attr);
+	attr.sched_flags =    0;
+	attr.sched_nice =     0;
+	attr.sched_priority = 0;
+
+	attr.sched_policy = SCHED_OTHER;
+	attr.sched_runtime = 0;
+	attr.sched_period =   0;
+	attr.sched_deadline = 0;
+
+	ret = sched_setattr(0, &attr, 0);
+	if (ret < 0) {
+		pthread_mutex_lock(&console_mux);
+		perror("ERROR: sched_setattr");
+		perror("ERROR: sched_setattr");
+		printf("runtime: %lld\nperiod: %lld\ndeadline: %lld\n",
+		           attr.sched_runtime,
+		           attr.sched_period,
+		           attr.sched_deadline);
+		pthread_mutex_unlock(&console_mux);
+		pthread_exit(NULL);
+	}
+}
+
+//.............................................................................
+// Sets the right scheduler
+//.............................................................................
 
 void set_scheduler(__u32 policy, task_par *tp)
 {
@@ -102,7 +146,10 @@ void set_scheduler(__u32 policy, task_par *tp)
 
 }
 
-
+//.............................................................................
+// Test if affinity to core-0 is ok
+// @return 1 if all is correct, 0 otherwise
+//.............................................................................
 
 int test_affinity()
 {
@@ -115,25 +162,10 @@ int test_affinity()
 		return 0;
 }
 
-void set_affinityx()
-{
-cpu_set_t	bitmap;
 
-	CPU_ZERO(&bitmap); // Resetting bitmap
-	CPU_SET(0, &bitmap); // Setting bitmap to zero
-
-	// Taking cpu-0
-	sched_setaffinity(0, sizeof(bitmap), &bitmap);
-
-	if(test_affinity() == 0) {
-		pthread_mutex_lock(&console_mux);
-		printf("Error set affinity\n");
-		pthread_mutex_unlock(&console_mux);
-		exit(1);
-	}
-
-
-}
+//.............................................................................
+// Creating task folder with the options for my taskset
+//.............................................................................
 
 void setup_affinity_folder()
 {
@@ -141,9 +173,9 @@ FILE	*f;
 char 	cpuset_folder[100];
 char 	cpuset_file[100];
 
-	strcpy(cpuset_folder, "/sys/fs/cgroup/cpuset/taskdl");
+	strcpy(cpuset_folder, "/sys/fs/cgroup/cpuset/taskset");
 
-	printf("#Creating folder \"%s\"\n", cpuset_folder);
+	printf("Creating folder \"%s\"\n", cpuset_folder);
 	rmdir(cpuset_folder);
 	if (mkdir(cpuset_folder, S_IRWXU)) {
 		printf("Error creating CPUSET folder\n");
@@ -162,7 +194,7 @@ char 	cpuset_file[100];
 	fprintf(f, "0");
 	fclose(f);
 
-	// Sets which CPU will be used by the taskss
+	// Sets which CPU will be used by the tasks
 
 	strcpy(cpuset_file, cpuset_folder);
 	strcat(cpuset_file, "/cpuset.cpus");
@@ -175,14 +207,19 @@ char 	cpuset_file[100];
 	fprintf(f, "0");
 
 	fclose(f);
+
 }
+
+//.............................................................................
+// Sets affinity for the task caller
+//.............................................................................
 
 void set_affinity()
 {
 FILE * f;
 char cpuset_file[100];
 
-	strcpy(cpuset_file, "/sys/fs/cgroup/cpuset/taskdl");
+	strcpy(cpuset_file, "/sys/fs/cgroup/cpuset/taskset");
 
 	strcat(cpuset_file, "/tasks");
 	f = fopen(cpuset_file, "w");
