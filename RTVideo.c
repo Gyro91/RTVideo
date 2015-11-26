@@ -18,7 +18,6 @@
 #define NUM_SAMPLES		30
 // Num tasks in the application (without overload tasks)
 #define NUM_TASKS		6
-
 #define NUM_FRAME1		379
 #define NUM_FRAME2		1440
 
@@ -28,6 +27,9 @@ task_par	mouse_t;		// Task that checks periodic mouse events
 task_par	action_mt;		// Aperiodic Task that perform mouse events
 task_par 	activation_t;	// Task which activates overload task
 task_par 	plot_t; 		// Task that must plot workload function
+task_par overload1_tk;		// Overload task ball
+task_par overload2_tk;		// Overload task random circle
+task_par overload3_tk;		// Overload task pseudo radar
 
 extern float N;
 __u32 policy = 0; // Policy of the scheduler
@@ -39,20 +41,17 @@ __u32 policy = 0; // Policy of the scheduler
 
 void check_arg()
 {
-int 	ok = 0;
-
-	if (policy == SCHED_DEADLINE) {
+	switch(policy) {
+	case SCHED_DEADLINE:
 		printf("Policy: SCHED_DEADLINE\n");
-		ok = 1;
-	}
-	if (policy == SCHED_FIFO) {
+		break;
+	case SCHED_FIFO:
 		printf("Policy: SCHED_FIFO\n");
-		ok = 1;
-	}
-
-	if (ok == 0) {
+		break;
+	default:
 		printf("Policy value is not correct\n");
 		exit(1);
+		break;
 	}
 }
 
@@ -168,12 +167,14 @@ void init_Tasks()
 
 	// Init Plot Task
 	plot_t.priority = LOW_PRIORITY;
-	/*
-	if(policy == SCHED_FIFO)
-		plot_t.priority = LOW_PRIORITY;
-	else
-		plot_t.priority = 1;// HIGH_PRIORITY - 1;
-	*/
+
+	// Init overload tasks
+	overload1_tk.period = overload1_tk.deadline = 5;
+	overload2_tk.period = overload2_tk.deadline = 40;
+	overload3_tk.period = overload3_tk.deadline = 5;
+	overload1_tk.priority = overload2_tk.priority =
+			overload3_tk.priority = HIGH_PRIORITY;
+
 }
 
 void create_Tasks()
@@ -185,8 +186,8 @@ pthread_t 	tid[NUM_TASKS];
 	tid[1] = create_task(play_task, &tp_play1);
 	tid[2] = create_task(play_task, &tp_play2);
 	tid[3] = create_task(plot_task, &plot_t);
-	tid[4] = create_task(mouse_task, &mouse_t);
-	tid[5] = create_task(activator_task, &activation_t);
+	tid[4] = create_task(activator_task, &activation_t);
+	tid[5] = create_task(mouse_task, &mouse_t);
 
 	// No join on action_mousetask, it could be blocked (no mouse events)
 	// It could prevent exit with esc from application
@@ -213,7 +214,7 @@ int	main (int argc, char *argv[])
 	init();
 	draw_interface();
 
-	pthread_barrier_init(&barr,  NULL, NUM_TASKS);
+	pthread_barrier_init(&barr, NULL, NUM_TASKS);
 
 	init_Tasks();
 	create_Tasks();

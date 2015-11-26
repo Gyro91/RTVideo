@@ -19,18 +19,19 @@
 #define LOOP			1
 #define STEP_COUNT		0.000001
 
-
-task_par overload1_tk;
-task_par overload2_tk;
-task_par overload3_tk;
-
+extern task_par overload1_tk;
+extern task_par overload2_tk;
+extern task_par overload3_tk;
 extern int 		last_step;
 extern __u32 	policy;
-float 			N;			// Value of counting task alone
-int 			cond_mouse = 0; 	// Condition of mouse (1 if pressed in the right area)
-unsigned int 	esc = 0;  	// If 0 the application can execute, if 1 it must exit
 
-// Barrier is needed to avoid a thread to block due to the stark scheduling
+float 			N;					// Value of counting task alone
+int 			cond_mouse = 0; 	// Condition of mouse
+									// (1 if pressed in the right area)
+unsigned int 	esc = 0;  			// If 0 the application can execute,
+									// otherwise exit
+
+// Barrier is needed to avoid a thread to block due to the stark scheduling.
 // Real time task has all the bandwidth and if a task like plotTask, that is
 // all active, changes scheduler before another task, so he cannot goes
 // in execution.
@@ -38,9 +39,9 @@ unsigned int 	esc = 0;  	// If 0 the application can execute, if 1 it must exit
 // with the right priority
 
 pthread_barrier_t 	barr;
-
 pthread_mutex_t 	mux;	 	// Define a mutex
 pthread_cond_t		cv;			// Define a cond. variable
+
 
 void wait_on_barr()
 {
@@ -131,7 +132,7 @@ struct timespec now;
 		tp->frame_c = 0;
 		time_add_ms(t, 1000);
 	}
-	if(tp->frame_r < 10)
+	if(tp->frame_r < 10 && policy != SCHED_DEADLINE)
 	// Clear old state
 		rectfill(screen, Ifolder->x_window, VIDEO_HEIGHT,
 				Ifolder->x_window + COLUMN - 2,
@@ -143,8 +144,13 @@ struct timespec now;
 			WHITE, BLACK);
 
 	// Dmiss on screen
-	text_state(Ifolder->x_window + 80, VIDEO_HEIGHT,
-			"Dmiss:", tp->dmiss);
+	if(policy != SCHED_DEADLINE)
+		text_state(Ifolder->x_window + 80, VIDEO_HEIGHT,
+				"Dmiss:", tp->dmiss);
+	else
+		textout_ex(screen, font, "Dmiss:-",
+				Ifolder->x_window + 80, VIDEO_HEIGHT,
+				WHITE, BLACK);
 	// Frame Rate on screen
 	text_state(Ifolder->x_window + 170, VIDEO_HEIGHT,
 			"Frame-Rate(FPS):", tp->frame_r);
@@ -168,7 +174,7 @@ struct timespec	t;
 	// Setup t for counting the frame rate in a second
 	wait_for_one_sec(&t);
 	set_period(tp);
-	while(!esc) {
+	while (!esc) {
 
 		// Loading the video on the screen
 		play_video(tp);
@@ -189,6 +195,12 @@ struct timespec	t;
 		if (tp->frame_index == (Ifolder->nframes + 1))
 			tp->frame_index = 1;
 	}
+
+	pthread_mutex_lock(&console_mux);
+
+	printf("Play task exit\n");
+
+	pthread_mutex_unlock(&console_mux);
 	pthread_exit(NULL);
 }
 
@@ -236,6 +248,11 @@ task_par 			*tp = (task_par*)p;
 		} while (time_cmp(&now, &t) < 0);
 	} while (!esc);
 
+	pthread_mutex_lock(&console_mux);
+
+	printf("Plot task exit\n");
+
+	pthread_mutex_unlock(&console_mux);
 	pthread_exit(NULL);
 }
 
@@ -301,7 +318,7 @@ task_par 	*tp = (task_par *)p;
 		enable_hardware_cursor();
 
 	set_period(tp);
-	while(!esc) {
+	while (!esc) {
 		pthread_mutex_lock(&mux);
 		if (mouse_b & 1) {
 			// If mouse sx pressed
@@ -320,6 +337,11 @@ task_par 	*tp = (task_par *)p;
 		wait_for_period(tp);
 	}
 
+	pthread_mutex_lock(&console_mux);
+
+	printf("Mouse task exit\n");
+
+	pthread_mutex_unlock(&console_mux);
 	pthread_exit(NULL);
 }
 
@@ -338,7 +360,7 @@ task_par 	*tp = (task_par *)p;
 	wait_on_barr();
 
 	set_period(tp);
-	while(!esc) {
+	while (!esc) {
 		pthread_mutex_lock(&mux);
 		while (!cond_mouse) {
 			// Wait mouse pressed in the right area
@@ -357,7 +379,11 @@ task_par 	*tp = (task_par *)p;
 
 		wait_for_period(tp);
 	}
+	pthread_mutex_lock(&console_mux);
 
+	printf("Action mouse exit\n");
+
+	pthread_mutex_unlock(&console_mux);
 	pthread_exit(NULL);
 }
 
@@ -402,6 +428,7 @@ task_par 	*tp = (task_par*)p;
 
 		wait_for_period(tp);
 	}
+
 	pthread_exit(NULL);
 }
 
@@ -418,7 +445,7 @@ task_par *tp = (task_par*)p;
 	set_affinity();
 
 	set_period(tp);
-	while(!esc) {
+	while (!esc) {
 		// Draw Animation
 		circlefill(screen, (3 * COLUMN) / 2,
 				START_OVERLOAD_SCREEN + 100,
@@ -434,7 +461,7 @@ task_par *tp = (task_par*)p;
 
 //.............................................................................
 // Body of the  task that must create an overload task after a button press
-// The animation is like a radar
+// The animation is like a clock
 //.............................................................................
 
 
@@ -488,13 +515,7 @@ task_par 	*tp = (task_par*)p;
 	set_affinity();
 	wait_on_barr();
 
-	overload1_tk.period = overload1_tk.deadline = 5;
-	overload2_tk.period = overload2_tk.deadline = 40;
-	overload3_tk.period = overload3_tk.deadline = 5;
-	overload1_tk.priority = overload2_tk.priority =
-			overload3_tk.priority = HIGH_PRIORITY;
-
-	while(count < 4) {
+	while (count < 4) {
 		// Waiting for a input
 		get_keycodes(&scan);
 		// Check which tasks must be created
@@ -507,12 +528,22 @@ task_par 	*tp = (task_par*)p;
 		if (scan == KEY_ENTER && count == 2)
 			activate_overloadtask(overload_task3, &overload3_tk,
 				&count, &scan);
+		if (scan == KEY_ESC) {
+			pthread_mutex_lock(&console_mux);
 
-		if(scan == KEY_ESC) {
+			printf("Start to exit\n");
+
+			pthread_mutex_unlock(&console_mux);
 			count = 4;
 			esc = 1;
 		}
 	}
+
+	pthread_mutex_lock(&console_mux);
+
+	printf("Activator task exit\n");
+
+	pthread_mutex_unlock(&console_mux);
 
 	pthread_exit(NULL);
 }

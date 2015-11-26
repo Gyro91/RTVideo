@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Draw.h"
 
-graph workload;
+point last_point; // Last point of the function drawn on screen
 
 // Variables useful for updating axisX
 int start_time;	// Start point axisX
@@ -20,6 +20,10 @@ void init()
 	set_gfx_mode(GFX_AUTODETECT_WINDOWED,
 				SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);
 	clear_to_color(screen, BLACK);
+
+	// Last point with values meaningless
+	last_point.x = -1;
+	last_point.y = -1;
 }
 
 //.............................................................................
@@ -72,14 +76,14 @@ char 	uinteger[4];
 
 //.............................................................................
 // Function for drawing a scale on x. Axes x is in sec, every 4 pixel
-// there's 50ms
+// there's FAKE_PERIOD
 //.............................................................................
 
 void draw_scaleX()
 {
 int		i;
 char	uinteger[4];
-int step = SCALE_X * (1000 / FAKE_PERIOD); // It's where is one second
+int 	step = SCALE_X * (1000 / FAKE_PERIOD); // It's where is one second
 
 	for (i=ORIGIN_X + step; i<=HEIGHT_AXIS_X; i+=step) {
 		// Drawing a ref value on the axis
@@ -187,22 +191,19 @@ char integer[DIM_INT];
 
 void draw_point(int x, int y)
 {
-int i = workload.index;
-
-	workload.points[i].x = x;
-	workload.points[i].y = ORIGIN_Y - (y * SCALE_Y);
-
-	if(i == 0)
+	// The first time we have only one point
+	if (last_point.x == -1 && last_point.x == -1)
 		putpixel(screen,
 				x, ORIGIN_Y - (y * SCALE_Y),
 				RED);
 	else
 		line(screen, x, ORIGIN_Y - (y * SCALE_Y),
-				workload.points[i - 1].x,
-				workload.points[i - 1].y,
+				last_point.x,
+				last_point.y,
 				RED);
-
-	workload.index++;
+	// Updating last point
+	last_point.x = x;
+	last_point.y = ORIGIN_Y - (y * SCALE_Y);
 }
 
 //.............................................................................
@@ -215,7 +216,9 @@ void clean_graph()
 			MAX_WIDTH, MAX_HEIGHT,
 			0, START_GRAPH_SCREEN, BLACK);
 	draw_cardinal_axes();
-	workload.index = 0;
+	// Updating last_point to initial condition
+	last_point.x = -1;
+	last_point.y = -1;
 }
 
 //.............................................................................

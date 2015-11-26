@@ -36,6 +36,7 @@
 #define __NR_sched_getattr		381
 #endif
 
+extern pthread_mutex_t console_mux;
 
 struct sched_attr {
   __u32 size;

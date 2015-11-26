@@ -61,12 +61,6 @@ typedef struct point_ {
 	int y;
 } point;
 
-// Struct to define a graph
-typedef struct graph_ {
-	int index;		// Actual point drawn
-	point points[HEIGHT_AXIS_X];
-} graph;
-
 extern void draw_interface();
 extern void init();
 extern void draw_axisX(int, int);
