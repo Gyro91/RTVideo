@@ -22,13 +22,13 @@
 extern task_par overload1_tk;
 extern task_par overload2_tk;
 extern task_par overload3_tk;
-extern int 		last_step;
-extern __u32 	policy;
+extern int last_step;
+extern __u32 policy;
 
-float 			N;					// Value of counting task alone
-int 			cond_mouse = 0; 	// Condition of mouse
+float 	N;					// Value of counting task alone
+int 	cond_mouse = 0; 	// Condition of mouse
 									// (1 if pressed in the right area)
-unsigned int 	esc = 0;  			// If 0 the application can execute,
+unsigned int esc = 0;  			// If 0 the application can execute,
 									// otherwise exit
 
 // Barrier is needed to avoid a thread to block due to the stark scheduling.
@@ -424,7 +424,7 @@ task_par 	*tp = (task_par*)p;
 			step = 1;
 
 		// Overload
-		busy_wait(5);
+		busy_wait(2);
 
 		wait_for_period(tp);
 	}
@@ -451,7 +451,7 @@ task_par *tp = (task_par*)p;
 				START_OVERLOAD_SCREEN + 100,
 				50, RANDOM);
 		// Overload
-		busy_wait(30);
+		busy_wait(15);
 
 		wait_for_period(tp);
 	}
@@ -493,7 +493,7 @@ task_par 	*tp = (task_par*)p;
 		circle(screen, cx, cy, 80, RED);
 
 		// Overload
-		busy_wait(30);
+		busy_wait(40);
 
 		wait_for_period(tp);
 	}

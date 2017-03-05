@@ -13,20 +13,20 @@
 
 // Polling rate default is 125Hz
 #define POLLING_PERIOD	8
-#define VIDEO_PERIOD	30
+#define VIDEO_PERIOD	33.5
 // Num sample for Calibration
-#define NUM_SAMPLES		30
+#define NUM_SAMPLES	30
 // Num tasks in the application (without overload tasks)
-#define NUM_TASKS		6
-#define NUM_FRAME1		379
-#define NUM_FRAME2		1440
+#define NUM_TASKS	6
+#define NUM_FRAME1	379
+#define NUM_FRAME2	1440
 
-task_par	tp_play1;		// Task plays Bunny's video
-task_par	tp_play2;		// Task that plays Earth's video
-task_par	mouse_t;		// Task that checks periodic mouse events
-task_par	action_mt;		// Aperiodic Task that perform mouse events
-task_par 	activation_t;	// Task which activates overload task
-task_par 	plot_t; 		// Task that must plot workload function
+task_par tp_play1;		// Task plays Bunny's video
+task_par tp_play2;		// Task that plays Earth's video
+task_par mouse_t;		// Task that checks periodic mouse events
+task_par action_mt;		// Aperiodic Task that perform mouse events
+task_par activation_t;		// Task which activates overload task
+task_par plot_t; 		// Task that must plot workload function
 task_par overload1_tk;		// Overload task ball
 task_par overload2_tk;		// Overload task random circle
 task_par overload3_tk;		// Overload task pseudo radar
@@ -199,6 +199,7 @@ pthread_t 	tid[NUM_TASKS];
 		}
 	}
 }
+
 int	main (int argc, char *argv[])
 {
 	// Getting and Checking policy

@@ -15,6 +15,7 @@
 #include "Sched_new.h"
 
 #define ALL_TASKS 	9
+#define RUNTIME_WCET 20
 // Utilizazion factor for one CPU
 #define Uf			1
 
@@ -83,7 +84,7 @@ struct 	sched_attr attr;
 	attr.sched_priority = 0;
 
 	attr.sched_policy = SCHED_DEADLINE;
-	attr.sched_runtime =  tp-> deadline * ((float)Uf / (float)(ALL_TASKS))
+	attr.sched_runtime =  RUNTIME_WCET * ((float)Uf / (float)(ALL_TASKS))
 			* 1000 * 1000;
 	attr.sched_period =   tp->period * 1000 * 1000;
 	attr.sched_deadline = tp->deadline * 1000 * 1000;
